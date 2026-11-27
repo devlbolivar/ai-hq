@@ -119,6 +119,7 @@ export type PathResult =
 export type WalkabilityGrid = readonly (readonly boolean[])[];
 
 export type LayoutErrorCode =
+  | 'INVALID_GEOMETRY'
   | 'OUT_OF_BOUNDS'
   | 'DUPLICATE_ID'
   | 'BLOCKING_OVERLAP'

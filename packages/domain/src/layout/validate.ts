@@ -1,10 +1,32 @@
 import { footprint, isWalkable, reachableFrom, walkability } from '../scene/walkability';
-import type { Coord, GridSize, LayoutError, OfficeLayout, ValidationResult } from '../types';
+import type { Coord, GridSize, LayoutError, OfficeLayout, Size, ValidationResult } from '../types';
 
 const fmt = (t: Coord) => `(${t.x},${t.y})`;
 
+function integerTile(tile: Coord): boolean {
+  return Number.isInteger(tile.x) && Number.isInteger(tile.y);
+}
+
+function validArea({ origin, size }: { origin: Coord; size: Size }): boolean {
+  return (
+    integerTile(origin) &&
+    Number.isInteger(size.w) &&
+    size.w >= 1 &&
+    Number.isInteger(size.h) &&
+    size.h >= 1
+  );
+}
+
+function invalidArea(id: string): LayoutError {
+  return {
+    code: 'INVALID_GEOMETRY',
+    objectId: id,
+    message: `El área de "${id}" requiere coordenadas enteras y dimensiones enteras positivas.`,
+  };
+}
+
 function inGrid(t: Coord, grid: GridSize): boolean {
-  return t.x >= 0 && t.y >= 0 && t.x < grid.cols && t.y < grid.rows;
+  return integerTile(t) && t.x >= 0 && t.y >= 0 && t.x < grid.cols && t.y < grid.rows;
 }
 
 /** Ids must be unique among objects and, separately, among zones. */
@@ -51,6 +73,10 @@ function checkBounds(layout: OfficeLayout): LayoutError[] {
     }
   }
   for (const zone of layout.zones) {
+    if (!validArea(zone.area)) {
+      errors.push(invalidArea(zone.id));
+      continue;
+    }
     const { origin, size } = zone.area;
     const corner = { x: origin.x + size.w - 1, y: origin.y + size.h - 1 };
     const outside = !inGrid(origin, grid) ? origin : !inGrid(corner, grid) ? corner : null;
@@ -63,7 +89,13 @@ function checkBounds(layout: OfficeLayout): LayoutError[] {
       });
     }
   }
-  if (!inGrid(layout.entrance, grid)) {
+  if (!integerTile(layout.entrance)) {
+    errors.push({
+      code: 'INVALID_GEOMETRY',
+      tile: layout.entrance,
+      message: `La entrada ${fmt(layout.entrance)} requiere coordenadas enteras.`,
+    });
+  } else if (!inGrid(layout.entrance, grid)) {
     errors.push({
       code: 'OUT_OF_BOUNDS',
       tile: layout.entrance,
@@ -173,7 +205,14 @@ function checkWalkability(layout: OfficeLayout): LayoutError[] {
   const reach = entranceWalkable ? reachableFrom(walk, layout.entrance) : null;
   for (const obj of layout.objects) {
     for (const { tile } of obj.usePoints) {
-      if (!isWalkable(walk, tile)) {
+      if (!integerTile(tile)) {
+        errors.push({
+          code: 'INVALID_GEOMETRY',
+          objectId: obj.id,
+          tile,
+          message: `El punto de uso ${fmt(tile)} de "${obj.id}" requiere coordenadas enteras.`,
+        });
+      } else if (!isWalkable(walk, tile)) {
         errors.push({
           code: 'USE_POINT_BLOCKED',
           objectId: obj.id,
@@ -195,16 +234,24 @@ function checkWalkability(layout: OfficeLayout): LayoutError[] {
 
 const CHECKS = [
   checkIds,
-  checkBounds,
-  checkBlockingOverlaps,
   checkScreensAndAttachments,
   checkRequiredUsePoints,
   checkDeskUsePoints,
-  checkWalkability,
 ] as const;
 
 /** Validates a layout and reports every problem at once (FR-008, FR-009a, FR-009b). */
 export function validateLayout(layout: OfficeLayout): ValidationResult {
   const errors = CHECKS.flatMap((check) => check(layout));
+  const objects = layout.objects.filter((obj) => {
+    if (validArea(obj)) return true;
+    errors.push(invalidArea(obj.id));
+    return false;
+  });
+  const spatialLayout = { ...layout, objects };
+  errors.push(
+    ...checkBounds(spatialLayout),
+    ...checkBlockingOverlaps(spatialLayout),
+    ...checkWalkability(spatialLayout),
+  );
   return errors.length === 0 ? { ok: true } : { ok: false, errors };
 }
