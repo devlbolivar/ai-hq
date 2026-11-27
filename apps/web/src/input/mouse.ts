@@ -1,12 +1,27 @@
-import { ZOOM_STEP, type Point } from '@ai-hq/domain';
+import {
+  screenToGrid,
+  ZOOM_STEP,
+  type Camera,
+  type Coord,
+  type OfficeLayout,
+  type Point,
+} from '@ai-hq/domain';
 
-/** Store actions the mouse drives: camera (drag, wheel) and hover (move, leave). */
+/**
+ * Store actions the mouse drives: camera (drag, wheel), hover (move, leave) and, in debug mode,
+ * tile picking (click).
+ */
 export interface MouseActions {
   panBy(delta: Point): void;
   zoomAt(anchor: Point, factor: number): void;
   /** Pointer position relative to the canvas host. */
   pointerMove(screenPoint: Point): void;
   pointerLeave(): void;
+  isDebugEnabled(): boolean;
+  getCamera(): Camera;
+  getLayout(): OfficeLayout;
+  /** A tile clicked in debug mode (FR-023). */
+  selectTile(tile: Coord): void;
 }
 
 /** The fields of a `PointerEvent` the mouse input reads. */
@@ -54,7 +69,7 @@ function wheelNotches({ deltaY, deltaMode }: WheelInfo): number {
 }
 
 /**
- * Translates pointer and wheel events into camera and hover actions. `element` is the canvas host;
+ * Translates pointer and wheel events into camera, hover and debug-picking actions. `element` is the canvas host;
  * wheel anchors and hover points are made relative to it.
  */
 export function createMouseInput(actions: MouseActions, element?: Element): MouseInput {
@@ -100,8 +115,13 @@ export function createMouseInput(actions: MouseActions, element?: Element): Mous
       actions.panBy({ x: at.x - press.last.x, y: at.y - press.last.y });
       press.last = at;
     },
-    handlePointerUp() {
+    handlePointerUp(event) {
+      const click = press !== null && !press.dragging;
       press = null;
+      if (!click || !actions.isDebugEnabled()) return;
+      const at = relative(event.clientX, event.clientY);
+      const tile = screenToGrid(actions.getCamera(), at, actions.getLayout());
+      if (tile) actions.selectTile(tile);
     },
     handleWheel(event) {
       if (event.deltaY === 0 || startsOnUiControl(event.target)) return;

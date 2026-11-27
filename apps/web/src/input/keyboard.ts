@@ -1,10 +1,12 @@
 import { ZOOM_STEP, type Point, type Viewport } from '@ai-hq/domain';
 
-/** Camera actions provided by the store. */
+/** Camera and debug actions provided by the store. */
 export interface KeyboardCameraActions {
   panBy(delta: Point): void;
   zoomAt(anchor: Point, factor: number): void;
   recenter(): void;
+  /** Turns debug mode on or off (FR-023). */
+  toggleDebug(): void;
   getViewport(): Viewport;
 }
 
@@ -42,6 +44,9 @@ export function createKeyboardInput(actions: KeyboardCameraActions): KeyboardInp
         actions.zoomAt({ x: width / 2, y: height / 2 }, key === '-' ? 1 / ZOOM_STEP : ZOOM_STEP);
       } else if (key === '0') {
         actions.recenter();
+      } else if (key === 'g') {
+        // Holding G must not flicker debug mode on and off.
+        if (!event.repeat) actions.toggleDebug();
       } else {
         return;
       }
