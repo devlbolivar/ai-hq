@@ -36,3 +36,4 @@ export * from './agents/movement';
 export * from './agents/autonomy';
 export * from './agents/simulation';
 export * from './agents/orders';
+export { centerOn } from './camera/follow';

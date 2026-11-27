@@ -138,8 +138,8 @@ cámara que centra y sigue.
 
 - [x] T049 [P] [US2] (Codex) RED: selection tests in `packages/domain/test/agents/selection.test.ts` — `selectByNumber` 1–6 selects, 7–9 keep `current`; `cycleSelection` wraps both ways, from `null` Tab → first and Shift+Tab → last, empty team → `null` (FR-026, US2-3, US2-4)
 - [x] T050 [US2] (Codex) GREEN: implement `packages/domain/src/agents/selection.ts` and export it
-- [ ] T051 [P] [US2] RED: `centerOn` tests in `packages/domain/test/camera/follow.test.ts` — keeps zoom; the world point lands on the viewport center when the limits allow; otherwise the closest camera allowed by the 001 limits (FR-028)
-- [ ] T052 [US2] GREEN: implement `centerOn` in `packages/domain/src/camera/follow.ts` and export it
+- [x] T051 [P] [US2] RED: `centerOn` tests in `packages/domain/test/camera/follow.test.ts` — keeps zoom; the world point lands on the viewport center when the limits allow; otherwise the closest camera allowed by the 001 limits (FR-028)
+- [x] T052 [US2] GREEN: implement `centerOn` in `packages/domain/src/camera/follow.ts` and export it
 - [ ] T053 [P] [US2] RED→GREEN: `apps/web/test/state/follow.test.ts` then `apps/web/src/state/follow.ts` — `followOffset(start, target, elapsedMs)` eases out and reaches `target` at 400 ms (≤ 500 ms, FR-028)
 - [ ] T054 [US2] RED: store selection tests in `apps/web/test/state/selection.test.ts` — `select(id)` sets `selection` and starts following; each frame keeps the agent centered (≤ 2 px or clamped) incl. after `setViewport`; `panBy`/`zoomAt`/`recenter` stop following but keep the selection; `select` again resumes; selecting while `paused` still centers (the follow transition uses frame time, not `sim.timeMs`); `selectNumber`, `cycle`, `deselect` (data-model.md `Selection.agentId`, `Selection.following`, `OfficeState.follow`; FR-026–FR-028)
 - [ ] T055 [US2] GREEN: implement selection and follow in `apps/web/src/state/store.ts`
