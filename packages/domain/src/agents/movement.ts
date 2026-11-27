@@ -34,19 +34,23 @@ export function advanceMovement(
 ): { agent: AgentRuntime; arrived: boolean } {
   if (agent.next === null) return { agent, arrived: false };
 
-  let { tile, next, route, facing } = agent;
+  let tile: Coord = agent.tile;
+  let next: Coord | null = agent.next;
+  let route = agent.route;
+  let facing = agent.facing;
   let stepMs = agent.stepMs + dtMs;
   let arrived = false;
   while (next !== null && stepMs >= STEP_DURATION_MS) {
+    const reached: Coord = next;
     stepMs -= STEP_DURATION_MS;
-    tile = next;
+    tile = reached;
     next = route[0] ?? null;
     route = route.slice(1);
     if (next === null) {
       arrived = true;
       stepMs = 0;
     } else {
-      facing = directionBetween(tile, next);
+      facing = directionBetween(reached, next);
     }
   }
   return { agent: { ...agent, tile, next, route, facing, stepMs }, arrived };
