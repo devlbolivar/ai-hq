@@ -17,6 +17,7 @@ const FOUNDATIONAL_FUNCTIONS = [
   'renderLayoutAscii',
   'walkability',
   'reachableFrom',
+  'findPath',
 ] as const;
 
 describe('@ai-hq/domain foundational exports (contracts/domain-api.md)', () => {
