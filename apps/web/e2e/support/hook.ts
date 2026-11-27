@@ -1,10 +1,11 @@
 import { expect, type Page } from '@playwright/test';
-import type { Camera, Coord, Point, Viewport } from '@ai-hq/domain';
+import type { Camera, Coord, HoverTarget, Point, Viewport } from '@ai-hq/domain';
 
-/** Subset of `window.__AIHQ__` (contracts/ui-contract.md) used by the camera e2e tests. */
-interface CameraHook {
+/** Subset of `window.__AIHQ__` (contracts/ui-contract.md) used by the e2e tests. */
+interface SceneHook {
   ready: boolean;
   camera: Camera;
+  hover: HoverTarget;
   gridToScreen(tile: Coord): Point;
 }
 
@@ -23,14 +24,21 @@ export async function openOffice(page: Page): Promise<void> {
 
 export function readCamera(page: Page): Promise<Camera> {
   return page.evaluate(() => {
-    const { camera } = (window as unknown as { __AIHQ__: CameraHook }).__AIHQ__;
+    const { camera } = (window as unknown as { __AIHQ__: SceneHook }).__AIHQ__;
     return { offset: { ...camera.offset }, zoom: camera.zoom };
+  });
+}
+
+export function readHover(page: Page): Promise<HoverTarget> {
+  return page.evaluate(() => {
+    const { hover } = (window as unknown as { __AIHQ__: SceneHook }).__AIHQ__;
+    return hover === null ? null : JSON.parse(JSON.stringify(hover));
   });
 }
 
 export function gridToScreen(page: Page, tile: Coord): Promise<Point> {
   return page.evaluate(
-    (t) => (window as unknown as { __AIHQ__: CameraHook }).__AIHQ__.gridToScreen(t),
+    (t) => (window as unknown as { __AIHQ__: SceneHook }).__AIHQ__.gridToScreen(t),
     tile,
   );
 }
