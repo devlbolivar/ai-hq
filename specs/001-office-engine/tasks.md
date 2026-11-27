@@ -130,14 +130,14 @@ objetos del layout en el orden de `drawOrder()` del dominio, cámara a 1x centra
 **Independent Test**: hover sobre suelo, mesa de reuniones, planta alta y fuera de la oficina
 (quickstart 7).
 
-- [ ] T051 [P] [US3] RED: e2e `apps/web/e2e/hover.spec.ts` — floor tile → `hover.type 'tile'`; meeting table → its id and label "Mesa de reuniones"; a plant covering a tile behind → the plant; outside the office → `null` and no label (FR-017–FR-019)
+- [x] T051 [P] [US3] RED: e2e `apps/web/e2e/hover.spec.ts` — floor tile → `hover.type 'tile'`; meeting table → its id and label "Mesa de reuniones"; a plant covering a tile behind → the plant; outside the office → `null` and no label (FR-017–FR-019)
 - [x] T052 [P] [US3] RED: hit-test tests in `packages/domain/test/scene/hitTest.test.ts` — `silhouette` of a 1x1 object with height 0 equals the tile diamond; multi-tile footprint; `hitTest` returns the front-most object (reverse `drawOrder`), falls back to the floor tile, returns `null` outside (data-model.md `HoverTarget`, research R5)
 - [x] T053 [US3] GREEN: implement `silhouette` and `hitTest` in `packages/domain/src/scene/hitTest.ts`; export from `packages/domain/src/index.ts`
 - [x] T054 [US3] RED: store hover tests in `apps/web/test/state/hover.test.ts` — `pointerMove(screenPoint)` sets `hover` via camera + `hitTest`; `pointerLeave` sets `null`
 - [x] T055 [US3] GREEN: add `hover`, `pointerMove`, `pointerLeave` to `apps/web/src/state/store.ts`
 - [x] T056 [P] [US3] RED: `apps/web/test/ui/HoverLabel.test.tsx` — role `status` shows the object `name` only when hovering an object
 - [x] T057 [US3] GREEN: implement `apps/web/src/ui/HoverLabel.tsx`
-- [ ] T058 [US3] Implement hover highlight (tile diamond or full footprint) in `apps/web/src/render/drawOverlay.ts`, wire pointer move/leave in `apps/web/src/input/mouse.ts` and `OfficeCanvas.tsx`, add `HoverLabel` to `App.tsx`; make T051 pass
+- [x] T058 [US3] Implement hover highlight (tile diamond or full footprint) in `apps/web/src/render/drawOverlay.ts`, wire pointer move/leave in `apps/web/src/input/mouse.ts` and `OfficeCanvas.tsx`, add `HoverLabel` to `App.tsx`; make T051 pass
 
 **Checkpoint**: US1–US3 funcionan de forma independiente
 
