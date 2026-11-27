@@ -1,8 +1,8 @@
 import { Graphics } from 'pixi.js';
 import { gridToWorld, type OfficeLayout, type Point } from '@ai-hq/domain';
+import { flat, tileDiamond } from './geometry';
 import { theme } from './palette';
 
-const flat = (points: readonly Point[]): number[] => points.flatMap((p) => [p.x, p.y]);
 const down = (p: Point, dy: number): Point => ({ x: p.x, y: p.y + dy });
 
 /**
@@ -27,8 +27,7 @@ export function drawFloor(layout: OfficeLayout): Graphics {
 
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
-      const diamond = [at(x, y), at(x + 1, y), at(x + 1, y + 1), at(x, y + 1)];
-      g.poly(flat(diamond))
+      g.poly(flat(tileDiamond({ x, y }, tile)))
         .fill((x + y) % 2 === 0 ? theme.floor.top : theme.floor.alt)
         .stroke({ color: theme.floor.line, width: 1, alignment: 0.5 });
     }

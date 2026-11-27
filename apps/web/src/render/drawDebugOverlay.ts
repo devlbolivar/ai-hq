@@ -1,6 +1,5 @@
 import type { Graphics } from 'pixi.js';
 import {
-  gridToWorld,
   tileCenter,
   walkability,
   type Coord,
@@ -9,6 +8,7 @@ import {
   type Point,
 } from '@ai-hq/domain';
 import type { DebugState } from '../state/store';
+import { flat, tileDiamond } from './geometry';
 import { theme } from './palette';
 
 /** A use point drawn as an arrow from its tile center towards where the person faces. */
@@ -42,11 +42,6 @@ const FACING: Readonly<Record<Direction, Coord>> = {
 /** Fraction of the way to the faced neighbor's center where the arrow tip lands. */
 const ARROW_REACH = 0.45;
 
-function diamond({ x, y }: Coord, layout: OfficeLayout): Point[] {
-  const at = (gx: number, gy: number) => gridToWorld({ x: gx, y: gy }, layout.tile);
-  return [at(x, y), at(x + 1, y), at(x + 1, y + 1), at(x, y + 1)];
-}
-
 function arrow(tile: Coord, facing: Direction, layout: OfficeLayout): UsePointArrow {
   const step = FACING[facing];
   const from = tileCenter(tile, layout.tile);
@@ -68,23 +63,23 @@ export function debugOverlay(debug: DebugState, layout: OfficeLayout): DebugOver
   const walkable: Point[][] = [];
   walk.forEach((row, y) =>
     row.forEach((free, x) => {
-      if (free) walkable.push(diamond({ x, y }, layout));
+      if (free) walkable.push(tileDiamond({ x, y }, layout.tile));
     }),
   );
   const { result } = debug;
   return {
     walkable,
-    entrance: diamond(layout.entrance, layout),
+    entrance: tileDiamond(layout.entrance, layout.tile),
     usePoints: layout.objects.flatMap((o) =>
       o.usePoints.map((u) => arrow(u.tile, u.facing, layout)),
     ),
-    from: debug.from ? diamond(debug.from, layout) : null,
-    to: debug.to ? { tile: diamond(debug.to, layout), reachable: result?.ok === true } : null,
+    from: debug.from ? tileDiamond(debug.from, layout.tile) : null,
+    to: debug.to
+      ? { tile: tileDiamond(debug.to, layout.tile), reachable: result?.ok === true }
+      : null,
     path: result?.ok ? result.path.map((t) => tileCenter(t, layout.tile)) : null,
   };
 }
-
-const flat = (points: readonly Point[]): number[] => points.flatMap((p) => [p.x, p.y]);
 
 /** Arrow head: two short strokes back from `to`, at ±30° from the shaft. */
 function arrowHead({ from, to }: UsePointArrow): number[] {

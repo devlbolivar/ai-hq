@@ -6,6 +6,7 @@ import {
   type SocialNetwork,
   type TileSize,
 } from '@ai-hq/domain';
+import { flat } from './geometry';
 import { kindColors, networkStyles, shade, theme, type NetworkIconId } from './palette';
 
 /** Axis-aligned box in fractional grid units: x ∈ [x0, x1], y ∈ [y0, y1]. */
@@ -21,7 +22,6 @@ const WALL_DEPTH = 0.22;
 const FACE_LEFT = 0.78;
 const FACE_RIGHT = 0.6;
 
-const flat = (points: readonly Point[]): number[] => points.flatMap((p) => [p.x, p.y]);
 const up = (p: Point, h: number): Point => ({ x: p.x, y: p.y - h });
 
 /** Footprint of `obj` shrunk by `inset` tiles on every side. */
