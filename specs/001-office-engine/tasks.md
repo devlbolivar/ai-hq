@@ -33,13 +33,13 @@ Monorepo pnpm (ver plan.md): `packages/domain/{src,test}`, `apps/web/{src,test,e
 
 **Purpose**: Monorepo, herramientas y quality gate funcionando con tests de humo
 
-- [ ] T001 Install pnpm (`npm i -g pnpm`) and create root `package.json` (private; scripts `dev`, `build`, `lint`, `typecheck`, `test`, `test:coverage`, `e2e`; `engines.node >=22`; `packageManager`), `pnpm-workspace.yaml` (`apps/*`, `packages/*`) and `.nvmrc` (`22`) at repo root
-- [ ] T002 Create `tsconfig.base.json` at repo root (`strict`, `noUncheckedIndexedAccess`, `target ES2022`, `moduleResolution bundler`, `isolatedModules`)
-- [ ] T003 [P] Configure ESLint flat config (typescript-eslint, eslint-plugin-react-hooks) in `eslint.config.js` and Prettier in `.prettierrc` + `.prettierignore` at repo root
-- [ ] T004 [P] Scaffold `@ai-hq/domain` in `packages/domain/` (`package.json` exporting `src/index.ts`, scripts `typecheck`/`test`, `tsconfig.json`, empty `src/index.ts`)
-- [ ] T005 [P] Scaffold empty stubs `@ai-hq/shared` in `packages/shared/` and `@ai-hq/server` in `apps/server/` (`package.json`, `tsconfig.json`, `src/index.ts` with `export {}`; no runtime dependencies — research R12)
-- [ ] T006 [P] Scaffold `@ai-hq/web` in `apps/web/` with Vite + React 18 + Tailwind v4 (`package.json`, `vite.config.ts` with `@vitejs/plugin-react` and `@tailwindcss/vite`, `index.html`, `src/main.tsx`, `src/App.tsx`, `src/index.css` with dark background, `tsconfig.json`)
-- [ ] T007 Configure Vitest projects in `vitest.config.ts` at repo root (`domain`: environment node, `packages/domain/test/**`; `web`: environment jsdom, `apps/web/test/**`) with `@vitest/coverage-v8` thresholds: `packages/domain` ≥ 95 %, `packages/*` ≥ 80 %
+- [x] T001 Install pnpm (`npm i -g pnpm`) and create root `package.json` (private; scripts `dev`, `build`, `lint`, `typecheck`, `test`, `test:coverage`, `e2e`; `engines.node >=22`; `packageManager`), `pnpm-workspace.yaml` (`apps/*`, `packages/*`) and `.nvmrc` (`22`) at repo root
+- [x] T002 Create `tsconfig.base.json` at repo root (`strict`, `noUncheckedIndexedAccess`, `target ES2022`, `moduleResolution bundler`, `isolatedModules`)
+- [x] T003 [P] Configure ESLint flat config (typescript-eslint, eslint-plugin-react-hooks) in `eslint.config.js` and Prettier in `.prettierrc` + `.prettierignore` at repo root
+- [x] T004 [P] Scaffold `@ai-hq/domain` in `packages/domain/` (`package.json` exporting `src/index.ts`, scripts `typecheck`/`test`, `tsconfig.json`, empty `src/index.ts`)
+- [x] T005 [P] Scaffold empty stubs `@ai-hq/shared` in `packages/shared/` and `@ai-hq/server` in `apps/server/` (`package.json`, `tsconfig.json`, `src/index.ts` with `export {}`; no runtime dependencies — research R12)
+- [x] T006 [P] Scaffold `@ai-hq/web` in `apps/web/` with Vite + React 18 + Tailwind v4 (`package.json`, `vite.config.ts` with `@vitejs/plugin-react` and `@tailwindcss/vite`, `index.html`, `src/main.tsx`, `src/App.tsx`, `src/index.css` with dark background, `tsconfig.json`)
+- [x] T007 Configure Vitest projects in `vitest.config.ts` at repo root (`domain`: environment node, `packages/domain/test/**`; `web`: environment jsdom, `apps/web/test/**`) with `@vitest/coverage-v8` thresholds: `packages/domain` ≥ 95 %, `packages/*` ≥ 80 %
 - [ ] T008 RED→GREEN smoke tests: `packages/domain/test/smoke.test.ts` (imports the package) and `apps/web/test/App.test.tsx` (renders `App` with heading "AI HQ — Marketing" via Testing Library)
 - [ ] T009 Configure Playwright in `apps/web/playwright.config.ts` (Chromium; `webServer`: `vite build --mode e2e && vite preview` with `VITE_E2E=1`) and smoke e2e `apps/web/e2e/smoke.spec.ts` (page loads, title "AI HQ")
 - [ ] T010 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm e2e` at repo root and fix configuration until green (no feature code)
