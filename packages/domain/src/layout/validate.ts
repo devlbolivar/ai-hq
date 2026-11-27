@@ -7,12 +7,9 @@ function inGrid(t: Coord, grid: GridSize): boolean {
   return t.x >= 0 && t.y >= 0 && t.x < grid.cols && t.y < grid.rows;
 }
 
-/** Validates a layout and reports every problem at once (FR-008, FR-009a, FR-009b). */
-export function validateLayout(layout: OfficeLayout): ValidationResult {
+/** Ids must be unique among objects and, separately, among zones. */
+function checkIds(layout: OfficeLayout): LayoutError[] {
   const errors: LayoutError[] = [];
-  const { grid } = layout;
-
-  // Ids
   const objectIds = new Set<string>();
   for (const obj of layout.objects) {
     if (objectIds.has(obj.id)) {
@@ -35,8 +32,13 @@ export function validateLayout(layout: OfficeLayout): ValidationResult {
     }
     zoneIds.add(zone.id);
   }
+  return errors;
+}
 
-  // Bounds
+/** Objects, zones and the entrance must lie inside the grid. */
+function checkBounds(layout: OfficeLayout): LayoutError[] {
+  const errors: LayoutError[] = [];
+  const { grid } = layout;
   for (const obj of layout.objects) {
     const outside = footprint(obj).find((t) => !inGrid(t, grid));
     if (outside) {
@@ -61,16 +63,19 @@ export function validateLayout(layout: OfficeLayout): ValidationResult {
       });
     }
   }
-  const entranceInGrid = inGrid(layout.entrance, grid);
-  if (!entranceInGrid) {
+  if (!inGrid(layout.entrance, grid)) {
     errors.push({
       code: 'OUT_OF_BOUNDS',
       tile: layout.entrance,
       message: `La entrada ${fmt(layout.entrance)} está fuera de la cuadrícula.`,
     });
   }
+  return errors;
+}
 
-  // Blocking overlaps
+/** Two blocking objects must not share a tile. */
+function checkBlockingOverlaps(layout: OfficeLayout): LayoutError[] {
+  const errors: LayoutError[] = [];
   const occupant = new Map<string, string>();
   for (const obj of layout.objects) {
     if (!obj.blocking) continue;
@@ -89,8 +94,13 @@ export function validateLayout(layout: OfficeLayout): ValidationResult {
       }
     }
   }
+  return errors;
+}
 
-  // Screens and attachments
+/** Screens name their network; attachments point to an existing object. */
+function checkScreensAndAttachments(layout: OfficeLayout): LayoutError[] {
+  const errors: LayoutError[] = [];
+  const objectIds = new Set(layout.objects.map((o) => o.id));
   for (const obj of layout.objects) {
     if (obj.kind === 'screen' && !obj.network) {
       errors.push({
@@ -107,8 +117,12 @@ export function validateLayout(layout: OfficeLayout): ValidationResult {
       });
     }
   }
+  return errors;
+}
 
-  // Desks: exactly one use point, on their chair
+/** Each desk has exactly one use point, on its chair. */
+function checkDeskUsePoints(layout: OfficeLayout): LayoutError[] {
+  const errors: LayoutError[] = [];
   for (const desk of layout.objects.filter((o) => o.kind === 'desk')) {
     const chair = layout.objects.find((o) => o.kind === 'chair' && o.attachedTo === desk.id);
     const [usePoint, ...extra] = desk.usePoints;
@@ -128,9 +142,14 @@ export function validateLayout(layout: OfficeLayout): ValidationResult {
       });
     }
   }
+  return errors;
+}
 
-  // Walkability and reachability
+/** The entrance is walkable and every use point is walkable and reachable from it. */
+function checkWalkability(layout: OfficeLayout): LayoutError[] {
+  const errors: LayoutError[] = [];
   const walk = walkability(layout);
+  const entranceInGrid = inGrid(layout.entrance, layout.grid);
   const entranceWalkable = entranceInGrid && isWalkable(walk, layout.entrance);
   if (entranceInGrid && !entranceWalkable) {
     errors.push({
@@ -159,6 +178,20 @@ export function validateLayout(layout: OfficeLayout): ValidationResult {
       }
     }
   }
+  return errors;
+}
 
+const CHECKS = [
+  checkIds,
+  checkBounds,
+  checkBlockingOverlaps,
+  checkScreensAndAttachments,
+  checkDeskUsePoints,
+  checkWalkability,
+] as const;
+
+/** Validates a layout and reports every problem at once (FR-008, FR-009a, FR-009b). */
+export function validateLayout(layout: OfficeLayout): ValidationResult {
+  const errors = CHECKS.flatMap((check) => check(layout));
   return errors.length === 0 ? { ok: true } : { ok: false, errors };
 }
