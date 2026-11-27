@@ -1,4 +1,4 @@
-import type { ObjectKind, SocialNetwork } from '@ai-hq/domain';
+import type { AgentStatus, ObjectKind, SocialNetwork } from '@ai-hq/domain';
 
 /** Abstract glyphs drawn by code for each network screen — never official logos (FR-007). */
 export type NetworkIconId = 'aperture' | 'note' | 'play' | 'nodes' | 'spark';
@@ -68,3 +68,13 @@ export function shade(color: number, factor: number): number {
 export function toCss(color: number): string {
   return `#${color.toString(16).padStart(6, '0')}`;
 }
+
+/** Spanish status labels for cards, panel and the selected agent's bubble (FR-025). */
+export const STATUS_LABELS: Readonly<Record<AgentStatus, string>> = {
+  idle: 'Desocupado',
+  walking: 'Caminando',
+  working: 'Trabajando',
+  meeting: 'En reunión',
+  break: 'Descanso',
+  waiting_review: 'Esperando revisión',
+};
