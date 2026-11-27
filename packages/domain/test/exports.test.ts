@@ -77,6 +77,7 @@ const AGENT_FUNCTIONS = [
   'stepSimulation',
   'advanceFrame',
   'agentById',
+  'chooseAutonomousTarget',
 ] as const;
 
 describe('@ai-hq/domain agent exports (002 contracts/domain-api.md)', () => {
@@ -103,6 +104,8 @@ describe('@ai-hq/domain agent exports (002 contracts/domain-api.md)', () => {
     'WORK_MS',
     'BREAK_MS',
     'CELEBRATE_MS',
+    'AUTONOMOUS_ACTIVITIES',
+    'ACCEPTANCE_SEED',
   ])('exports %s', (name) => {
     expect(domain).toHaveProperty(name);
   });
