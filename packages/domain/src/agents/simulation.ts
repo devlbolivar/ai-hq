@@ -1,7 +1,8 @@
 import { validateLayout } from '../layout/validate';
 import { walkability } from '../scene/walkability';
 import type { OfficeLayout } from '../types';
-import { BREAK_MS, CELEBRATE_MS, IDLE_PAUSE_MS, WORK_MS } from './autonomy';
+import { BREAK_MS, CELEBRATE_MS, chooseAutonomousTarget, IDLE_PAUSE_MS, WORK_MS } from './autonomy';
+import { sendAgent } from './dispatch';
 import { advanceMovement } from './movement';
 import { randomInt, seedRng, type RngState } from './rng';
 import { transition, type AgentStatus } from './stateMachine';
@@ -70,9 +71,29 @@ export function createSimulation(world: SimWorld, seed: number): Simulation {
   return { timeMs: 0, rng, agents };
 }
 
+/**
+ * Seed with which every agent completes an autonomous cycle within the first 60 s (FR-019, SC-005);
+ * documented in quickstart.md.
+ */
+export const ACCEPTANCE_SEED = 1;
+
 /** Mutable per-step context: the PRNG is consumed in team order. */
 interface StepContext {
   rng: RngState;
+  world: SimWorld;
+  /** Agents of this step so far: earlier agents already updated (they reserve first). */
+  agents: AgentRuntime[];
+  timeMs: number;
+}
+
+/** The idle pause ran out: pick an autonomous target and go (or start in place). */
+function decide(agent: AgentRuntime, ctx: StepContext): AgentRuntime {
+  const view: Simulation = { timeMs: ctx.timeMs, rng: ctx.rng, agents: ctx.agents };
+  const { target, rng } = chooseAutonomousTarget(view, ctx.world, agent.id);
+  ctx.rng = rng;
+  const sent = target ? sendAgent(agent, ctx.world, target, false) : null;
+  if (sent === null) return { ...agent, timerMs: draw(ctx, IDLE_PAUSE_MS) };
+  return sent.next === null ? { ...sent, timerMs: timerFor(sent.status, false, ctx) } : sent;
 }
 
 function draw(ctx: StepContext, [min, max]: readonly [number, number]): number {
@@ -133,16 +154,17 @@ function stepAgent(agent: AgentRuntime, ctx: StepContext): AgentRuntime {
   const timerMs = agent.timerMs - SIM_STEP_MS;
   if (timerMs > 0) return { ...agent, timerMs };
   if (agent.status === 'working') return { ...agent, timerMs: null, celebrateMs: CELEBRATE_MS };
-  if (agent.status === 'idle') return { ...agent, timerMs: null };
+  if (agent.status === 'idle') return decide({ ...agent, timerMs: null }, ctx);
   return finish(agent, ctx);
 }
 
 /** Advances exactly SIM_STEP_MS, processing agents in team order. */
 export function stepSimulation(sim: Simulation, world: SimWorld): Simulation {
-  void world;
-  const ctx: StepContext = { rng: sim.rng };
-  const agents = sim.agents.map((agent) => stepAgent(agent, ctx));
-  return { timeMs: sim.timeMs + SIM_STEP_MS, rng: ctx.rng, agents };
+  const ctx: StepContext = { rng: sim.rng, world, agents: [...sim.agents], timeMs: sim.timeMs };
+  ctx.agents.forEach((agent, i) => {
+    ctx.agents[i] = stepAgent(agent, ctx);
+  });
+  return { timeMs: sim.timeMs + SIM_STEP_MS, rng: ctx.rng, agents: ctx.agents };
 }
 
 /** Fixed-step clock: clips the frame, runs whole steps and returns the remainder (FR-015). */
