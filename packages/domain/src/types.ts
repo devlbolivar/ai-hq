@@ -126,6 +126,7 @@ export type LayoutErrorCode =
   | 'USE_POINT_BLOCKED'
   | 'USE_POINT_UNREACHABLE'
   | 'MISSING_NETWORK'
+  | 'MISSING_USE_POINT'
   | 'DESK_USE_POINT'
   | 'BAD_ATTACHMENT';
 

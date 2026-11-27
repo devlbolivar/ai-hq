@@ -120,6 +120,18 @@ function checkScreensAndAttachments(layout: OfficeLayout): LayoutError[] {
   return errors;
 }
 
+const needsUsePoint = new Set(['meeting-table', 'coffee-machine', 'sofa', 'whiteboard']);
+
+function checkRequiredUsePoints(layout: OfficeLayout): LayoutError[] {
+  return layout.objects
+    .filter((obj) => needsUsePoint.has(obj.kind) && obj.usePoints.length === 0)
+    .map((obj) => ({
+      code: 'MISSING_USE_POINT',
+      objectId: obj.id,
+      message: `El objeto "${obj.id}" debe tener al menos un punto de uso.`,
+    }));
+}
+
 /** Each desk has exactly one use point, on its chair. */
 function checkDeskUsePoints(layout: OfficeLayout): LayoutError[] {
   const errors: LayoutError[] = [];
@@ -186,6 +198,7 @@ const CHECKS = [
   checkBounds,
   checkBlockingOverlaps,
   checkScreensAndAttachments,
+  checkRequiredUsePoints,
   checkDeskUsePoints,
   checkWalkability,
 ] as const;
