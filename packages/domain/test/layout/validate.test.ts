@@ -116,6 +116,12 @@ describe('validateLayout (FR-008, FR-009b)', () => {
     expect(only(layout, 'DUPLICATE_ID').objectId).toBe('desks');
   });
 
+  it('reports both duplicate ID and overlap for coincident blocking objects', () => {
+    const plant = marketingLayout.objects.find((o) => o.id === 'plant-1')!;
+    const errors = errorsOf(addObjects(marketingLayout, { ...plant }));
+    expect(errors.map((e) => e.code).sort()).toEqual(['BLOCKING_OVERLAP', 'DUPLICATE_ID']);
+  });
+
   it('BLOCKING_OVERLAP: two blocking objects share a tile', () => {
     const e = only(
       addObjects(marketingLayout, makeObject({ id: 'plant-x', origin: { x: 3, y: 5 } })),
