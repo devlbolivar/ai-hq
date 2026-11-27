@@ -186,10 +186,11 @@ ningún `NEEDS CLARIFICATION`; estas decisiones fijan el "cómo" de lo que la sp
   - Los personajes viven en el mismo contenedor `objects` que los muebles, con `sortableChildren` y
     `zIndex` = posición en `sceneOrder`, recalculado cuando cambia la simulación. Así el hook puede
     publicar el orden real de hijos (fix #7 de la 001 ampliado).
-  - Cada personaje es un `Container` con piezas (`Graphics` de cuerpo, cabeza, pelo, accesorio,
-    brazos, piernas) que se redibujan solo al cambiar orientación o apariencia; las animaciones son
-    transformaciones (respirar = escala/offset; caminar = piernas y balanceo; teclear = brazos;
-    café = brazo con taza; celebrar = salto y brazos arriba) en función del tiempo simulado.
+  - Cada personaje es un `Container` con el anillo y una figura (`Graphics`). La figura se dibuja por
+    fotogramas de animación muestreados cada 50 ms de tiempo simulado (respirar, caminar, teclear,
+    café, celebrar); cada fotograma (orientación, pose, índice) se dibuja una vez en un
+    `GraphicsContext` cacheado y animar solo cambia el contexto de la figura, sin reconstruir
+    geometría en cada cuadro. Cambiar la apariencia vacía la caché.
   - La geometría sale de una función pura `characterShapes(appearance, color, facing, pose, t)` que
     devuelve formas (elipse, rect, polígono) en coordenadas locales. Dos renderizadores finos la
     consumen: Pixi (oficina) y SVG (vista previa del editor y avatar de las tarjetas). Una sola fuente

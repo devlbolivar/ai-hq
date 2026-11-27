@@ -195,3 +195,21 @@ export function characterShapes(
   if (pose === 'coffee') shapes.push(rect('cup', CUP, dx > 0 ? 7 : -10, -36 - lift, 3, 4));
   return shapes;
 }
+
+/** Length of each pose's animation cycle in simulated ms (`coffee` is static). */
+export const POSE_PERIOD_MS: Readonly<Record<Pose, number>> = {
+  idle: 1200,
+  walk: 500,
+  type: 2 * Math.PI * 45,
+  coffee: Infinity,
+  celebrate: 500,
+};
+
+/** Animation frames are sampled every FRAME_MS of simulated time. */
+export const FRAME_MS = 50;
+
+/** Frame index of `t` within the pose cycle; the shapes of a frame are drawn at `index × FRAME_MS`. */
+export function frameIndex(pose: Pose, t: number): number {
+  const period = POSE_PERIOD_MS[pose];
+  return Number.isFinite(period) ? Math.floor((t % period) / FRAME_MS) : 0;
+}
