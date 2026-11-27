@@ -14,6 +14,7 @@ export function PathStatus({ store = officeStore }: { store?: OfficeStore }): JS
   return (
     <div
       role="status"
+      aria-label={message}
       className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-slate-600 bg-slate-800/90 px-3 py-1.5 text-sm font-medium text-slate-100 shadow-lg select-none"
     >
       {message}
