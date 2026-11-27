@@ -79,6 +79,7 @@ interface AIHQTestHook /* …campos de la 001… */ {
     celebrating: boolean
   }[]
   selection: { agentId: string | null; following: boolean }
+  ringFor: string | null         // agente con el anillo visible
   editorOpen: boolean
   agentToScreen(id: string): { x: number; y: number }   // centro del cuerpo en pantalla
   test: {

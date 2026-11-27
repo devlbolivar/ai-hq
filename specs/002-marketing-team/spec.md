@@ -58,6 +58,13 @@ Decisiones derivadas de la crítica independiente de la spec (se aprueban junto 
 - Una orden de depuración repetida para la actividad en la que el agente ya está no hace nada; al
   desactivar el modo depuración se cancelan las órdenes forzadas y vuelve la autonomía.
 
+Enmienda tras `/speckit-analyze` (2026-11-27, aprobada por el usuario):
+
+- Un agente que se detiene por una cancelación nunca queda quieto sobre un punto de uso ajeno: termina
+  el paso en curso y, si ese tile es un punto de uso que no es el suyo, sigue por su ruta hasta el
+  primer tile que no lo sea. Si se detiene sobre su propio punto reservado, conserva la reserva
+  (FR-014, FR-034, US5-7).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Ver a mi equipo en la oficina (Priority: P1)
@@ -256,7 +263,8 @@ desaparecen.
 6. **Given** un agente en `meeting` por una orden, **When** vuelvo a pulsar "Reunión", **Then** no pasa
    nada (sigue en el mismo punto y estado).
 7. **Given** agentes con órdenes forzadas, **When** desactivo el modo depuración, **Then** sus órdenes se
-   cancelan: quedan en `idle` donde estén (o terminan el paso en curso) y vuelve la autonomía.
+   cancelan: quedan en `idle` donde estén (o terminan el paso en curso y, si ese tile es un punto de
+   uso ajeno, siguen hasta el primer tile de su ruta que no lo sea) y vuelve la autonomía.
 
 ---
 
@@ -274,7 +282,9 @@ desaparecen.
   desempatan de forma estable por el orden del equipo (gana el de número mayor, que se dibuja delante).
 - La burbuja y el anillo no cuentan como superficie del personaje para el hover ni para el clic.
 - Una orden o cancelación que llega a mitad de paso se aplica al completar ese paso, en el tile
-  siguiente; el agente nunca salta ni calcula rutas desde una posición intermedia.
+  siguiente; el agente nunca salta ni calcula rutas desde una posición intermedia. Una cancelación
+  cuyo tile siguiente es un punto de uso ajeno se hace efectiva en el primer tile de la ruta que no lo
+  sea.
 - Un agente seleccionado al que se le quita la selección mientras camina sigue caminando con normalidad.
 - Pulsar `1`–`9` o `Tab` durante una pausa (`Space`) cambia la selección y centra la cámara, pero los
   agentes siguen congelados.
@@ -372,8 +382,9 @@ desaparecen.
 - **FR-014**: Un punto de uso MUST poder estar ocupado o reservado por un solo agente a la vez; el
   agente que decide ir a él lo reserva al empezar a caminar, lo mantiene mientras está sobre él (también
   en `idle` al terminar la actividad) y lo libera solo al marcharse a otro destino o al cancelar la
-  marcha. El punto de uso de un escritorio solo puede usarlo el agente titular de ese escritorio, y los
-  paseos MUST NOT terminar en un punto de uso.
+  marcha; si al cancelar se detiene sobre ese mismo punto, lo conserva. Un agente quieto nunca ocupa
+  un punto de uso ajeno. El punto de uso de un escritorio solo puede usarlo el agente titular de ese
+  escritorio, y los paseos MUST NOT terminar en un punto de uso.
 - **FR-015**: La simulación MUST avanzar por pasos fijos de tiempo simulado, independientes de la
   frecuencia de dibujo, y como máximo 250 ms simulados por cuadro (el exceso tras pausas del navegador
   se descarta). Para la misma semilla, el estado en un mismo instante simulado MUST ser idéntico.
@@ -471,7 +482,8 @@ desaparecen.
   del agente. Un agente con una orden forzada MUST quedarse en el estado alcanzado (sin autonomía) hasta
   recibir otra orden o "Volver a idle". Repetir la orden de la actividad en la que ya está MUST NOT
   cambiar nada. Desactivar el modo depuración MUST cancelar todas las órdenes forzadas (los agentes
-  quedan en `idle` donde estén, tras completar el paso en curso, y vuelve la autonomía).
+  quedan en `idle` donde estén, tras completar el paso en curso —si ese tile es un punto de uso ajeno,
+  siguen por su ruta hasta el primer tile que no lo sea—, y vuelve la autonomía).
 
 **Rendimiento**
 
