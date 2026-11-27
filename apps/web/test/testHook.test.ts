@@ -76,9 +76,9 @@ describe('installTestHook', () => {
 
   it('reports fps as the frame count of the last second', () => {
     const { controls, hook } = install();
-    for (let i = 0; i <= 120; i++) controls.recordFrame(i * (1000 / 60));
+    for (let i = 0; i <= 120; i++) controls.recordFrame(Math.round(i * (1000 / 60)));
     expect(hook.fps).toBeCloseTo(60, 0);
-    for (let i = 1; i <= 30; i++) controls.recordFrame(2000 + i * (1000 / 30));
+    for (let i = 1; i <= 30; i++) controls.recordFrame(2000 + Math.round(i * (1000 / 30)));
     expect(hook.fps).toBeCloseTo(30, 0);
   });
 
