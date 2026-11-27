@@ -41,3 +41,25 @@ describe('@ai-hq/domain foundational exports (contracts/domain-api.md)', () => {
     expect(domain.marketingLayout.departmentId).toBe('marketing');
   });
 });
+
+/** Feature 002 (specs/002-marketing-team/contracts/domain-api.md). */
+const AGENT_FUNCTIONS = [
+  'transition',
+  'isActivityStatus',
+  'seedRng',
+  'nextFloat',
+  'randomInt',
+  'pick',
+  'selectByNumber',
+  'cycleSelection',
+] as const;
+
+describe('@ai-hq/domain agent exports (002 contracts/domain-api.md)', () => {
+  it.each(AGENT_FUNCTIONS)('exports %s', (name) => {
+    expect(typeof (domain as Record<string, unknown>)[name]).toBe('function');
+  });
+
+  it('exports AGENT_STATUSES', () => {
+    expect(domain).toHaveProperty('AGENT_STATUSES');
+  });
+});
