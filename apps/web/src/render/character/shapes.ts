@@ -160,19 +160,26 @@ export function characterShapes(
   facing: Direction,
   pose: Pose,
   t: number,
+  seated = false,
 ): CharacterShape[] {
   const breathe = pose === 'idle' ? (1 - Math.cos((t / 1200) * 2 * Math.PI)) / 2 : 0;
   const jump = pose === 'celebrate' ? Math.abs(Math.sin((t / 500) * Math.PI)) * 3 : 0;
-  const lift = breathe + jump;
+  // Sitting lowers the upper body onto the seat (chair, sofa).
+  const lift = breathe + jump - (seated ? 6 : 0);
   const stride = pose === 'walk' ? Math.sin((t / 250) * Math.PI) * 2 : 0;
   const headY = -37 - lift;
   const skin = skinHex.get(appearance.skinTone)!;
   const hair = hairHex.get(appearance.hairColor)!;
   const dx = side(facing);
 
+  const legs = seated
+    ? [rect('leg', LEGS, -5, -9, 4, 6), rect('leg', LEGS, 1, -9, 4, 6)]
+    : [
+        rect('leg', LEGS, -5, -14 - jump + Math.max(0, stride), 4, 14 - Math.max(0, stride)),
+        rect('leg', LEGS, 1, -14 - jump + Math.max(0, -stride), 4, 14 - Math.max(0, -stride)),
+      ];
   const shapes: CharacterShape[] = [
-    rect('leg', LEGS, -5, -14 - jump + Math.max(0, stride), 4, 14 - Math.max(0, stride)),
-    rect('leg', LEGS, 1, -14 - jump + Math.max(0, -stride), 4, 14 - Math.max(0, -stride)),
+    ...legs,
     rect('body', color, -7, -30 - lift, 14, 17),
     ...armShapes(pose, color, lift, t),
   ];

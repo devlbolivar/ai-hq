@@ -15,6 +15,8 @@ export interface CharacterLook {
   readonly position: GridPosition;
   readonly facing: Direction;
   readonly pose: Pose;
+  /** Sitting on a chair or the sofa. */
+  readonly seated?: boolean;
   /** Simulated time in ms (frozen while paused). */
   readonly t: number;
 }
@@ -69,7 +71,8 @@ export function updateCharacterView(
   }
 
   const index = frameIndex(look.pose, look.t);
-  const key = `${look.facing}|${look.pose}|${index}`;
+  const seated = look.seated ?? false;
+  const key = `${look.facing}|${look.pose}|${seated}|${index}`;
   let ctx = view.frames.get(key);
   if (!ctx) {
     const shapes = characterShapes(
@@ -78,6 +81,7 @@ export function updateCharacterView(
       look.facing,
       look.pose,
       index * FRAME_MS,
+      seated,
     );
     ctx = drawShapes(shapes);
     view.frames.set(key, ctx);
