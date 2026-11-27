@@ -75,6 +75,20 @@ describe('installTestHook', () => {
     expect(hook.hover).toBeNull();
   });
 
+  it('reads the debug state live from the store (US4)', () => {
+    const { store, hook } = install();
+    store.getState().toggleDebug();
+    store.getState().selectTile(marketingLayout.entrance);
+    expect(hook.debug).toEqual({
+      enabled: true,
+      from: marketingLayout.entrance,
+      to: null,
+      result: null,
+    });
+    store.getState().toggleDebug();
+    expect(hook.debug).toEqual({ enabled: false, from: null, to: null, result: null });
+  });
+
   it('marks the scene ready with its draw order', () => {
     const { controls, hook } = install();
     controls.markReady(['wall-0-1', 'desk-1']);
