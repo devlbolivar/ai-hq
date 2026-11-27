@@ -105,8 +105,8 @@ objetos del layout en el orden de `drawOrder()` del dominio, cámara a 1x centra
 **Independent Test**: arrastrar, hacer zoom hasta los límites, recentrar y repetir solo con teclado
 (quickstart 5–6).
 
-- [ ] T038 [P] [US2] RED: e2e `apps/web/e2e/camera.spec.ts` — drag moves `camera.offset`; wheel-in over `desk-1` (via `gridToScreen`) keeps it under the cursor; zoom clamps at 2 and 0.5; "Recentrar" restores the initial camera; dragging far keeps the office center inside the viewport; a drag starting on the button does not pan (FR-013–FR-016)
-- [ ] T039 [P] [US2] RED: e2e `apps/web/e2e/keyboard.spec.ts` — arrows and WASD pan; `+`/`=` and `-` zoom centered on screen within limits; `0` recenters; keys are ignored while an injected `<input>` has focus (FR-016a)
+- [x] T038 [P] [US2] RED: e2e `apps/web/e2e/camera.spec.ts` — drag moves `camera.offset`; wheel-in over `desk-1` (via `gridToScreen`) keeps it under the cursor; zoom clamps at 2 and 0.5; "Recentrar" restores the initial camera; dragging far keeps the office center inside the viewport; a drag starting on the button does not pan (FR-013–FR-016)
+- [x] T039 [P] [US2] RED: e2e `apps/web/e2e/keyboard.spec.ts` — arrows and WASD pan; `+`/`=` and `-` zoom centered on screen within limits; `0` recenters; keys are ignored while an injected `<input>` has focus (FR-016a)
 - [x] T040 [P] [US2] RED: camera ops tests in `packages/domain/test/camera/ops.test.ts` — `pan` adds delta; `zoomAt` keeps the anchor's world point; zoom clamped to `ZOOM_MIN`/`ZOOM_MAX` (data-model.md `Camera.zoom`); `ZOOM_STEP` 1.1; `recenter` equals `initialCamera`; every op keeps the office center inside the viewport (research R6, FR-016)
 - [x] T041 [US2] GREEN: implement `pan`, `zoomAt`, `recenter`, camera clamping and constants in `packages/domain/src/camera/ops.ts`; export from `packages/domain/src/index.ts`
 - [x] T042 [US2] RED: store camera action tests in `apps/web/test/state/camera-actions.test.ts` — `panBy`, `zoomAt`, `recenter` delegate to the domain; `setViewport` clamps the current camera
@@ -117,7 +117,7 @@ objetos del layout en el orden de `drawOrder()` del dominio, cámara a 1x centra
 - [x] T047 [US2] GREEN: implement `apps/web/src/input/keyboard.ts`
 - [x] T048 [P] [US2] RED: `apps/web/test/ui/RecenterButton.test.tsx` — role `button` named "Recentrar", click calls `recenter`, carries `data-ui-control`
 - [x] T049 [US2] GREEN: implement `apps/web/src/ui/RecenterButton.tsx`
-- [ ] T050 [US2] Wire mouse and keyboard input into `apps/web/src/render/OfficeCanvas.tsx` and `RecenterButton` into `apps/web/src/App.tsx`; make T038 and T039 pass
+- [x] T050 [US2] Wire mouse and keyboard input into `apps/web/src/render/OfficeCanvas.tsx` and `RecenterButton` into `apps/web/src/App.tsx`; make T038 and T039 pass
 
 **Checkpoint**: US1 + US2 funcionan de forma independiente
 

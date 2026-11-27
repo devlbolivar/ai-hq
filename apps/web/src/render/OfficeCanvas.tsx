@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { Application, Container } from 'pixi.js';
-import { drawOrder, ZOOM_MAX, type Camera } from '@ai-hq/domain';
+import { Application, Container, type Ticker } from 'pixi.js';
+import { drawOrder, ZOOM_MAX, type Camera, type Point } from '@ai-hq/domain';
+import { attachKeyboard, createKeyboardInput } from '../input/keyboard';
+import { attachMouse, createMouseInput } from '../input/mouse';
 import { officeStore, type OfficeStore } from '../state/store';
 import { installTestHook } from '../testHook';
 import { drawFloor } from './drawFloor';
@@ -34,6 +36,26 @@ function buildScene(store: OfficeStore): Scene {
   return { root, order };
 }
 
+/** Mouse and keyboard drive the camera through the store; returns a detach function. */
+function attachInput(app: Application, host: HTMLElement, store: OfficeStore): () => void {
+  const camera = {
+    panBy: (delta: Point) => store.getState().panBy(delta),
+    zoomAt: (anchor: Point, factor: number) => store.getState().zoomAt(anchor, factor),
+    recenter: () => store.getState().recenter(),
+    getViewport: () => store.getState().viewport,
+  };
+  const detachMouse = attachMouse(host, createMouseInput(camera, host));
+  const keyboard = createKeyboardInput(camera);
+  const detachKeyboard = attachKeyboard(window, keyboard);
+  const tick = (ticker: Ticker) => keyboard.tick(ticker.deltaMS);
+  app.ticker.add(tick);
+  return () => {
+    detachMouse();
+    detachKeyboard();
+    app.ticker.remove(tick);
+  };
+}
+
 function applyCamera(root: Container, camera: Camera): void {
   root.position.set(camera.offset.x, camera.offset.y);
   root.scale.set(camera.zoom);
@@ -55,6 +77,7 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
     let disposed = false;
     let initialized = false;
     let unsubscribe = () => {};
+    let detachInput = () => {};
 
     app
       .init({
@@ -84,6 +107,7 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
         );
         store.getState().setViewport({ width: app.screen.width, height: app.screen.height });
 
+        detachInput = attachInput(app, host, store);
         app.ticker.add(() => hook?.recordFrame(performance.now()));
         app.render();
         hook?.markReady(order);
@@ -95,10 +119,11 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
     return () => {
       disposed = true;
       unsubscribe();
+      detachInput();
       hook?.dispose();
       if (initialized) app.destroy(true, { children: true });
     };
   }, [store]);
 
-  return <div ref={hostRef} className="absolute inset-0 overflow-hidden" />;
+  return <div ref={hostRef} className="absolute inset-0 touch-none overflow-hidden select-none" />;
 }
