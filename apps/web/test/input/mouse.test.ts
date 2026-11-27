@@ -177,7 +177,7 @@ describe('mouse input — hover (FR-017–FR-019)', () => {
     expect(actions.panBy).not.toHaveBeenCalled();
   });
 
-  it('keeps updating the hover below the drag threshold but not while dragging', () => {
+  it('updates hover below the threshold, during a drag and at release', () => {
     const actions = makeActions();
     const mouse = createMouseInput(actions);
     mouse.handlePointerDown(pointer(100, 100));
@@ -186,10 +186,10 @@ describe('mouse input — hover (FR-017–FR-019)', () => {
     mouse.handlePointerMove(pointer(140, 100));
     mouse.handlePointerMove(pointer(160, 100));
     expect(actions.panBy).toHaveBeenCalledTimes(2);
-    expect(actions.pointerMove).toHaveBeenCalledTimes(1);
-    mouse.handlePointerUp(pointer(160, 100));
-    mouse.handlePointerMove(pointer(161, 100));
-    expect(actions.pointerMove).toHaveBeenCalledTimes(2);
+    expect(actions.pointerMove).toHaveBeenNthCalledWith(2, { x: 140, y: 100 });
+    expect(actions.pointerMove).toHaveBeenLastCalledWith({ x: 160, y: 100 });
+    mouse.handlePointerUp(pointer(163, 101));
+    expect(actions.pointerMove).toHaveBeenLastCalledWith({ x: 163, y: 101 });
   });
 
   it('a move over a [data-ui-control] or outside the host clears the hover once', () => {
