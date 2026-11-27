@@ -247,18 +247,19 @@ function drawSofa(g: Graphics, obj: OfficeObject, tile: TileSize) {
 function drawTable(g: Graphics, obj: OfficeObject, tile: TileSize) {
   const color = kindColors['meeting-table'];
   const b = footprintBox(obj, 0.12);
-  const leg = 0.15;
-  const cx = (b.x0 + b.x1) / 2;
-  const cy = (b.y0 + b.y1) / 2;
-  prism(
-    g,
-    { x0: cx - leg, y0: cy - leg, x1: cx + leg, y1: cy + leg },
-    0,
-    obj.height - 5,
-    shade(color, 0.7),
-    tile,
-  );
-  prism(g, b, obj.height - 5, 5, color, tile);
+  const leg = 0.1;
+  const top = obj.height - 5;
+  // Back legs first, so the front ones overlap them.
+  const legs: readonly (readonly [number, number])[] = [
+    [b.x0, b.y0],
+    [b.x1 - leg, b.y0],
+    [b.x0, b.y1 - leg],
+    [b.x1 - leg, b.y1 - leg],
+  ];
+  for (const [x, y] of legs) {
+    prism(g, { x0: x, y0: y, x1: x + leg, y1: y + leg }, 0, top, shade(color, 0.7), tile);
+  }
+  prism(g, b, top, 5, color, tile);
 }
 
 function drawCoffeeMachine(g: Graphics, obj: OfficeObject, tile: TileSize) {
