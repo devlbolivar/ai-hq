@@ -29,7 +29,8 @@ export function walkability(layout: OfficeLayout): WalkabilityGrid {
   return walk;
 }
 
-const STEPS: readonly Coord[] = [
+/** 4-direction neighbor offsets (N, E, S, W), shared by the flood fill and `findPath`. */
+export const STEPS: readonly Coord[] = [
   { x: 0, y: -1 },
   { x: 1, y: 0 },
   { x: 0, y: 1 },

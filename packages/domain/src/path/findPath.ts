@@ -1,12 +1,5 @@
-import { isWalkable } from '../scene/walkability';
+import { isWalkable, STEPS } from '../scene/walkability';
 import type { Coord, PathResult, WalkabilityGrid } from '../types';
-
-const STEPS: readonly Coord[] = [
-  { x: 0, y: -1 },
-  { x: 1, y: 0 },
-  { x: 0, y: 1 },
-  { x: -1, y: 0 },
-];
 
 interface SearchNode {
   tile: Coord;
