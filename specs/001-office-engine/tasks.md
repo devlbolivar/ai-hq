@@ -150,7 +150,7 @@ objetos del layout en el orden de `drawOrder()` del dominio, cámara a 1x centra
 **Independent Test**: `G`, clic en la entrada y en la silla del Escritorio 4 → ruta mínima; destino
 sobre un escritorio → "Sin ruta"; desactivar limpia todo (quickstart 8–9).
 
-- [ ] T059 [P] [US4] RED: e2e `apps/web/e2e/debug.spec.ts` — `G` toggles `debug.enabled`; click entrance `(8,11)` then chair of desk-4 `(3,9)` → `result.ok` with the minimal step count and status "Ruta: N pasos"; destination on a desk → "Sin ruta"; toggling off clears `from`, `to`, `result` (FR-021, FR-023, US4 escenario 6)
+- [x] T059 [P] [US4] RED: e2e `apps/web/e2e/debug.spec.ts` — `G` toggles `debug.enabled`; click entrance `(8,11)` then chair of desk-4 `(3,9)` → `result.ok` with the minimal step count and status "Ruta: N pasos"; destination on a desk → "Sin ruta"; toggling off clears `from`, `to`, `result` (FR-021, FR-023, US4 escenario 6)
 - [x] T060 [P] [US4] RED: path tests in `packages/domain/test/path/findPath.test.ts` — straight path; wall detour with minimal length; blocked destination → `reason 'blocked'`; enclosed destination → `'unreachable'`; outside grid → `'out-of-bounds'`; `from = to` → single-tile path; every step is 4-neighbor adjacent; identical result over 100 calls; tie-break order N, E, S, W (data-model.md `PathResult`, research R7, FR-022)
 - [x] T061 [US4] GREEN: implement `findPath` in `packages/domain/src/path/findPath.ts`; export from `packages/domain/src/index.ts`
 - [x] T062 [US4] RED: store debug tests in `apps/web/test/state/debug.test.ts` — transitions per data-model.md "Estado de UI" (`debug.enabled`, `debug.from`, `debug.to`, `debug.result`): toggle, first click = from, second = to + result, third restarts, disabling clears
@@ -159,7 +159,7 @@ sobre un escritorio → "Sin ruta"; desactivar limpia todo (quickstart 8–9).
 - [x] T065 [US4] GREEN: implement `apps/web/src/ui/DebugToggle.tsx` and `apps/web/src/ui/PathStatus.tsx`
 - [x] T066 [US4] RED: extend `apps/web/test/input/keyboard.test.ts` (`G` toggles debug) and `apps/web/test/input/mouse.test.ts` (in debug mode a click without drag selects the tile via `screenToGrid`; clicks outside the grid are ignored)
 - [x] T067 [US4] GREEN: extend `apps/web/src/input/keyboard.ts` and `apps/web/src/input/mouse.ts`
-- [ ] T068 [US4] Implement `apps/web/src/render/drawDebugOverlay.ts` (walkable grid, entrance, use points with facing arrows, path) and wire it plus `DebugToggle`/`PathStatus` into `OfficeCanvas.tsx` and `App.tsx`; make T059 pass
+- [x] T068 [US4] Implement `apps/web/src/render/drawDebugOverlay.ts` (walkable grid, entrance, use points with facing arrows, path) and wire it plus `DebugToggle`/`PathStatus` into `OfficeCanvas.tsx` and `App.tsx`; make T059 pass
 
 **Checkpoint**: las 4 historias funcionan de forma independiente
 

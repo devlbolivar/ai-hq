@@ -1,5 +1,7 @@
 import { OfficeCanvas } from './render/OfficeCanvas';
+import { DebugToggle } from './ui/DebugToggle';
 import { HoverLabel } from './ui/HoverLabel';
+import { PathStatus } from './ui/PathStatus';
 import { RecenterButton } from './ui/RecenterButton';
 
 export function App() {
@@ -8,6 +10,8 @@ export function App() {
       <h1 className="sr-only">AI HQ — Marketing</h1>
       <OfficeCanvas />
       <HoverLabel />
+      <PathStatus />
+      <DebugToggle />
       <RecenterButton />
     </main>
   );

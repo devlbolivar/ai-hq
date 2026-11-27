@@ -6,6 +6,7 @@ import { attachMouse, createMouseInput } from '../input/mouse';
 import { officeStore, type OfficeStore } from '../state/store';
 import { installTestHook } from '../testHook';
 import { drawFloor } from './drawFloor';
+import { drawDebugOverlay } from './drawDebugOverlay';
 import { drawObject } from './drawObject';
 import { drawOverlay } from './drawOverlay';
 import { theme } from './palette';
@@ -15,6 +16,8 @@ interface Scene {
   readonly order: string[];
   /** Hover highlight, redrawn when `hover` changes. */
   readonly highlight: Graphics;
+  /** Debug overlay (walkable grid, entrance, use points, route), under the hover highlight. */
+  readonly debugLayer: Graphics;
 }
 
 function buildScene(store: OfficeStore): Scene {
@@ -35,10 +38,11 @@ function buildScene(store: OfficeStore): Scene {
   }
 
   const overlay = new Container({ label: 'overlay' });
+  const debugLayer = new Graphics({ label: 'debug' });
   const highlight = new Graphics({ label: 'hover' });
-  overlay.addChild(highlight);
+  overlay.addChild(debugLayer, highlight);
   root.addChild(floor, objects, overlay);
-  return { root, order, highlight };
+  return { root, order, highlight, debugLayer };
 }
 
 /** Mouse and keyboard drive the camera and hover through the store; returns a detach function. */
@@ -114,12 +118,15 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
         }
         host.appendChild(app.canvas);
 
-        const { root, order, highlight } = buildScene(store);
+        const { root, order, highlight, debugLayer } = buildScene(store);
         app.stage.addChild(root);
-        applyCamera(root, store.getState().camera);
-        drawOverlay(highlight, store.getState().hover, store.getState().layout);
+        const initial = store.getState();
+        applyCamera(root, initial.camera);
+        drawDebugOverlay(debugLayer, initial.debug, initial.layout);
+        drawOverlay(highlight, initial.hover, initial.layout);
         unsubscribe = store.subscribe((state, prev) => {
           if (state.camera !== prev.camera) applyCamera(root, state.camera);
+          if (state.debug !== prev.debug) drawDebugOverlay(debugLayer, state.debug, state.layout);
           if (state.hover !== prev.hover) drawOverlay(highlight, state.hover, state.layout);
         });
 
