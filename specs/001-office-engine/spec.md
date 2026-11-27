@@ -14,6 +14,20 @@ cámara con pan, zoom 0.5x–2x centrado en cursor y recentrar; hover; tiles cam
 direcciones; gráficos por código, tema oscuro; 60 fps. Fuera de alcance: personajes, selección, tareas,
 feed, backend, persistencia."
 
+## Clarifications
+
+### Session 2026-11-27
+
+- Q: ¿Qué muros de la oficina se dibujan completos, solo los del fondo o los cuatro? → A: Solo los 2
+  muros del fondo a altura completa; el frente queda abierto, marcado solo por el borde del suelo.
+- Q: ¿El layout debe marcar, para cada mueble que se usa, en qué tile se coloca una persona para
+  usarlo? → A: Sí: escritorios, mesa de reuniones, cafetera, sofá y pizarra definen puntos de uso (tile
+  y dirección); la validación exige que sean caminables y alcanzables desde un tile de entrada.
+- Q: ¿Te propongo yo la distribución concreta de las zonas en la cuadrícula para que la apruebes, o
+  la defines tú? → A: Claude propone un mapa de 16x12 para aprobación (ver FR-005b). Mapa aprobado.
+- Q: ¿La cámara también debe poder manejarse con el teclado, además del ratón? → A: Sí: flechas/WASD
+  para desplazar, `+`/`-` para zoom, `0` para recentrar y `G` para el modo depuración.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Ver la oficina de Marketing (Priority: P1)
@@ -70,6 +84,9 @@ pulsar recentrar, verificando la posición y escala resultantes.
    posición y escala iniciales.
 6. **Given** que arrastro la oficina hacia un borde, **When** sigo arrastrando, **Then** la oficina
    nunca sale por completo de la ventana (queda visible al menos una parte).
+7. **Given** la escena cargada y sin el ratón, **When** uso flechas/WASD, `+`/`-` y `0`, **Then** la
+   vista se desplaza, hace zoom centrado en la pantalla (con los mismos límites 0.5x–2x) y se recentra,
+   respectivamente.
 
 ---
 
@@ -140,6 +157,8 @@ bloqueados, inalcanzables) y comprobar la ruta dibujada o el aviso de "sin ruta"
   origen-destino (determinista).
 - Un layout con un objeto fuera de la cuadrícula o dos objetos que bloquean el mismo tile se rechaza al
   cargar con un error claro, en lugar de dibujarse mal.
+- Un punto de uso colocado sobre un tile bloqueado, o encerrado sin conexión con el tile de entrada,
+  hace que el layout se rechace al cargar indicando qué objeto y qué punto fallan.
 - La escena se sigue viendo correctamente con zoom mínimo y máximo (sin huecos entre tiles ni bordes
   cortados).
 
@@ -164,8 +183,46 @@ bloqueados, inalcanzables) y comprobar la ruta dibujada o el aviso de "sin ruta"
   o una zona no requiera cambiar la lógica de dibujo.
 - **FR-005**: El layout de Marketing MUST incluir: 6 escritorios (cada uno con silla y monitor), una
   sala de reuniones con mesa, una pizarra de contenido, un área de café con cafetera y sofá, plantas
-  decorativas, muros perimetrales y una pared con 5 pantallas, una por red social (Instagram, TikTok,
-  YouTube, LinkedIn y X).
+  decorativas, muros y una pared con 5 pantallas, una por red social (Instagram, TikTok, YouTube,
+  LinkedIn y X).
+- **FR-005a**: Solo los 2 muros del fondo (arriba-izquierda y arriba-derecha) MUST dibujarse a altura
+  completa; el frente de la oficina MUST quedar abierto, delimitado solo por el borde del suelo, de modo
+  que ningún muro tape objetos del interior. Las pantallas de redes sociales y la pizarra MUST colgarse
+  de los muros del fondo.
+- **FR-005b**: La distribución inicial de Marketing MUST ser la del mapa siguiente (columna `x` 0–15 de
+  izquierda a derecha, fila `y` 0–11 de arriba abajo; el tile (0,0) es la esquina del fondo de la vista
+  isométrica, la fila `y=0` forma el muro del fondo derecho y la columna `x=0` el muro del fondo
+  izquierdo). Direcciones: N = hacia `y` menor, S = hacia `y` mayor, E = hacia `x` mayor, O = hacia `x`
+  menor.
+
+  ```text
+         x: 0 1 2 3 4 5 6 7 8 9 A B C D E F
+     y= 0:  W W W I T Y L X W W W W W W W W
+     y= 1:  W p . . . . . . . . p . . . . .
+     y= 2:  W . . . . . . . . . . m M M m .
+     y= 3:  P b . . . . . . . . . m M M m .
+     y= 4:  P . . . . . . . . . . . m m . .
+     y= 5:  W . . D . D . D . . . . . . . .
+     y= 6:  W . . c . c . c . . . . . . . .
+     y= 7:  W . . . . . . . . . . . . k K .
+     y= 8:  W . . D . D . D . . . . . . . .
+     y= 9:  W . . c . c . c . . . . . . . .
+     y=10:  W p . . . . . . . . . . F F . .
+     y=11:  W . . . . . . . E . . . . . . .
+  ```
+
+  Leyenda (A–F = columnas 10–15):
+  - `W` muro (bloquea). `I` `T` `Y` `L` `X` pantallas de Instagram, TikTok, YouTube, LinkedIn y X,
+    colgadas del muro del fondo derecho (bloquean, forman parte del muro).
+  - `P` pizarra de contenido (2 tiles, colgada del muro izquierdo); `b` su punto de uso, mirando a O.
+  - `D` escritorio con monitor (bloquea); numerados Escritorio 1–3 en la fila 5 y 4–6 en la fila 8, de
+    izquierda a derecha. `c` silla del escritorio de arriba (caminable), su punto de uso, mirando a N.
+  - `M` mesa de reuniones 2x2 (bloquea). `m` sus 6 puntos de uso: (11,2) y (11,3) mirando a E, (14,2) y
+    (14,3) mirando a O, (12,4) y (13,4) mirando a N.
+  - `K` cafetera (bloquea); `k` su punto de uso en (13,7), mirando a E.
+  - `F` sofá de 2 tiles (caminable, como las sillas); sus 2 puntos de uso están sobre sus propios tiles,
+    mirando a N.
+  - `p` planta (bloquea). `E` tile de entrada (caminable), en el borde frontal abierto. `.` suelo.
 - **FR-006**: Cada escritorio MUST tener un identificador estable (Escritorio 1 a 6) para que la feature
   de agentes pueda asignarlos.
 - **FR-007**: Cada pantalla de red social MUST distinguirse por un color y un icono propios; MUST NOT
@@ -174,6 +231,12 @@ bloqueados, inalcanzables) y comprobar la ruta dibujada o el aviso de "sin ruta"
   fuera de la cuadrícula o los solapamientos de objetos que bloquean el paso.
 - **FR-009**: El layout MUST pertenecer a una zona/departamento identificable ("Marketing"), de forma que
   en el futuro puedan existir otros departamentos sin rediseñar el formato.
+- **FR-009a**: El layout MUST definir un tile de entrada caminable y, para cada escritorio, la mesa de
+  reuniones, la cafetera, el sofá y la pizarra, uno o más puntos de uso (tile donde se coloca la persona
+  y dirección hacia la que mira). Cada escritorio MUST tener exactamente un punto de uso, en el tile de
+  su silla.
+- **FR-009b**: La validación del layout (FR-008) MUST rechazar con un mensaje claro cualquier punto de
+  uso que no sea caminable o al que no se pueda llegar por una ruta desde el tile de entrada.
 
 **Dibujo**
 
@@ -192,6 +255,10 @@ bloqueados, inalcanzables) y comprobar la ruta dibujada o el aviso de "sin ruta"
 - **FR-015**: Los usuarios MUST disponer de un control "Recentrar" que restaure la posición y el zoom
   iniciales (oficina centrada a 1x).
 - **FR-016**: La cámara MUST impedir que la oficina salga por completo de la ventana.
+- **FR-016a**: La cámara MUST poder manejarse también con el teclado: flechas o WASD para desplazar,
+  `+`/`-` para zoom centrado en el centro de la pantalla (mismos límites que FR-014), `0` para
+  recentrar y `G` para activar/desactivar el modo depuración (FR-023). Estos atajos MUST ignorarse
+  mientras el foco esté en un campo de texto.
 
 **Hover**
 
@@ -211,8 +278,8 @@ bloqueados, inalcanzables) y comprobar la ruta dibujada o el aviso de "sin ruta"
 - **FR-022**: Para el mismo layout y el mismo par origen-destino, la ruta devuelta MUST ser siempre la
   misma.
 - **FR-023**: Los usuarios MUST poder activar y desactivar un modo depuración que muestre los tiles
-  caminables y permita elegir origen y destino con clic para ver la ruta calculada o el aviso "sin
-  ruta".
+  caminables, el tile de entrada y los puntos de uso (con su dirección), y permita elegir origen y
+  destino con clic para ver la ruta calculada o el aviso "sin ruta".
 
 **Rendimiento**
 
@@ -229,8 +296,12 @@ bloqueados, inalcanzables) y comprobar la ruta dibujada o el aviso de "sin ruta"
   de pantallas, pizarra).
 - **Objeto de oficina**: mueble o elemento (escritorio, silla, monitor, planta, sofá, mesa de reuniones,
   cafetera, pizarra, pantalla de red social, muro) con identificador, nombre visible, tipo, posición,
-  tamaño en tiles, altura y si bloquea el paso. Las pantallas llevan además la red social que
-  representan.
+  tamaño en tiles, altura, si bloquea el paso y sus puntos de uso (si los tiene). Las pantallas llevan
+  además la red social que representan.
+- **Punto de uso**: tile caminable asociado a un objeto donde se coloca una persona para usarlo, con la
+  dirección hacia la que mira (una de las 4 direcciones de la cuadrícula).
+- **Tile de entrada**: tile caminable por el que se entra a la oficina; origen de referencia para
+  comprobar que todos los puntos de uso son alcanzables.
 - **Cámara**: desplazamiento y nivel de zoom actuales de la vista.
 - **Ruta**: secuencia ordenada de tiles vecinos desde un origen hasta un destino, o el resultado "sin
   ruta".
@@ -265,8 +336,8 @@ bloqueados, inalcanzables) y comprobar la ruta dibujada o el aviso de "sin ruta"
 - Los monitores y sillas son objetos asociados a su escritorio; la silla no bloquea el paso para que en
   el futuro un agente pueda "sentarse".
 - El nombre que muestra el hover es un texto corto en español definido en el layout.
-- El modo depuración se activa con un control visible en la interfaz (y opcionalmente un atajo de
-  teclado); no está pensado para el usuario final pero no requiere configuración especial.
+- El modo depuración se activa con un control visible en la interfaz o con la tecla `G`; no está
+  pensado para el usuario final pero no requiere configuración especial.
 - No hay persistencia: la posición de la cámara vuelve a la inicial al recargar.
 - Los colores de cada red social se eligen como tonos propios inspirados en cada plataforma, sin
   reproducir su identidad de marca.
