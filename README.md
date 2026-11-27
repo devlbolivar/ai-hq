@@ -32,6 +32,14 @@ pnpm --filter @ai-hq/web exec playwright install chromium
 pnpm e2e
 ```
 
+La prueba de rendimiento (`apps/web/e2e/perf.spec.ts`, ≥ 50 fps) corre al final, sola y con la GPU
+activada (Metal en macOS), porque el renderizado WebGL por software de Chromium headless no llega
+a ese ritmo. Para lanzarla aislada:
+
+```sh
+pnpm --filter @ai-hq/web exec playwright test --project=perf --no-deps
+```
+
 ## Scripts
 
 Ejecuta estos comandos desde la raíz.
