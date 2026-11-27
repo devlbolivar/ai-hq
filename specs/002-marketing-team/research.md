@@ -56,10 +56,10 @@ ningún `NEEDS CLARIFICATION`; estas decisiones fijan el "cómo" de lo que la sp
 ## R4. Regla de cero invenciones y prompt efectivo
 
 - **Decision**: `ZERO_INVENTION_RULE` es una constante de texto en español en `agents/prompt.ts`.
-  `effectivePrompt(profile) = ZERO_INVENTION_RULE + '\n\n' + systemPrompt'`, donde `systemPrompt'` es
-  el prompt editable con cualquier aparición literal de la regla eliminada (y recortado). Así el
-  prompt efectivo contiene la regla exactamente una vez aunque el usuario la pegue en su prompt
-  (FR-005). Los datos semilla no la incluyen; un test lo verifica, y otro cuenta apariciones en el
+  `cleanSystemPrompt(text)` elimina cualquier aparición literal de la regla y recorta; la usan la
+  validación del editor (vacío y longitud se miden sobre el texto limpio), el guardado (se guarda
+  limpio) y `effectivePrompt(profile) = ZERO_INVENTION_RULE + '\n\n' + cleanSystemPrompt(...)`. Así
+  el prompt efectivo contiene la regla exactamente una vez aunque el usuario la pegue (FR-005). Los datos semilla no la incluyen; un test lo verifica, y otro cuenta apariciones en el
   prompt efectivo de los 6 agentes tras cargar, editar y restaurar.
 - **Rationale**: un único bloque global (Clarifications) y garantía estructural de "exactamente una
   vez" sin añadir errores de validación nuevos a la spec.
@@ -120,12 +120,16 @@ ningún `NEEDS CLARIFICATION`; estas decisiones fijan el "cómo" de lo que la sp
     punto (FR-014, SC-005). Al cargar, cada agente reserva el punto de su escritorio.
   - Al entrar en `idle` sin orden forzada se programa una pausa `randomInt(3000, 8000)` ms (FR-016).
   - Al vencer: se elige una actividad al azar entre `work`, `break`, `whiteboard`, `wander`
-    (equiprobables); si no tiene destino libre, se prueban las demás en el orden de la lista a partir
-    de la elegida. Destinos: `work` → punto de su escritorio; `break` → `pick` entre los puntos libres
+    (equiprobables); si no tiene ningún candidato libre, se prueban las demás en el orden de la lista
+    (circular) a partir de la elegida. Entre los candidatos se sortea siempre con `pick`. Convenciones
+    de consumo del PRNG fijadas en el contrato (orden de agentes, enumeración por filas, cuándo se
+    sortean duraciones y pausas). Destinos: `work` → punto de su escritorio; `break` → `pick` entre los puntos libres
     de cafetera y sofá; `whiteboard` → punto de la pizarra si está libre (termina en `idle` mirándola);
     `wander` → `pick` entre tiles caminables que no son punto de uso, no son su tile actual y no están
-    ocupados ni son destino de otro agente. Destino inalcanzable → se descarta y se reintenta tras otra
-    pausa.
+    ocupados ni son destino de otro agente. Si el candidato sorteado es inalcanzable, se descarta, el
+    agente sigue como estaba y se reintenta tras otra pausa.
+  - La exclusión de puntos se comprueba por tile resuelto, y `createSimWorld` rechaza layouts con dos
+    puntos de uso en el mismo tile.
   - Duraciones: trabajar `randomInt(10000, 20000)`, descanso `randomInt(5000, 10000)`; celebrar 1000 ms
     al terminar `working` de forma natural (FR-017).
   - Al marcharse a otro destino se libera la reserva anterior y se reserva la nueva en el mismo paso.
@@ -137,15 +141,19 @@ ningún `NEEDS CLARIFICATION`; estas decisiones fijan el "cómo" de lo que la sp
 
 - **Decision**: `applyOrder(sim, world, agentId, order)` con `order ∈ { activity: work | meeting |
   break | review } | { go-to: tile } | { idle }` devuelve el nuevo estado y un resultado explícito
-  `{ ok: true, changed } | { ok: false, reason: NO_FREE_SPOT | UNREACHABLE | UNKNOWN_AGENT }`
+  `{ ok: true, changed } | { ok: false, reason: NO_FREE_SPOT | UNREACHABLE | INVALID_DESTINATION |
+  UNKNOWN_AGENT }`
   (FR-017a). El punto elegido es el libre más cercano por longitud de ruta desde el tile donde se
   aplicará la orden (el siguiente si va a mitad de paso); empate → orden de `usePoints` en el layout.
   Si el agente va a mitad de paso, se sustituye la ruta restante y la orden se hace efectiva al llegar
   al tile siguiente. La orden marca `forced = true` (sin autonomía) salvo `idle`, que la quita y
-  reinicia la pausa de reposo. Repetir la actividad en curso o hacia la que ya camina devuelve
-  `changed: false`. `cancelForcedOrders` (al desactivar depuración) deja a los agentes forzados en
-  `idle` donde estén (los que caminan, al terminar el paso, liberando la reserva) y devuelve la
-  autonomía. `go-to` solo lo usa el hook de pruebas (R13).
+  reinicia la pausa de reposo. Repetir una orden forzada de la actividad en curso (o hacia la que ya
+  camina) devuelve `changed: false`; si esa actividad venía de la autonomía, la orden la adopta (marca
+  `forced` y anula temporizador y celebración). Al detenerse, un agente que camina termina el paso y
+  para en el primer tile de su ruta que no sea punto de uso ajeno, de modo que nunca queda quieto sobre
+  un punto que no reserva. `cancelForcedOrders` (al desactivar depuración) aplica lo mismo a todos los
+  forzados y devuelve la autonomía; el store vacía además las órdenes encoladas en pausa. `go-to` solo
+  lo usa el hook de pruebas (R13) y rechaza puntos de uso y tiles ocupados (`INVALID_DESTINATION`).
 - **Rationale**: la 004 necesitará aplicar órdenes y conocer el resultado; la regla "mitad de paso →
   siguiente tile" sale de las Clarifications.
 - **Alternatives considered**: cola de órdenes pendientes dentro del agente (más estado sin
@@ -154,12 +162,15 @@ ningún `NEEDS CLARIFICATION`; estas decisiones fijan el "cómo" de lo que la sp
 ## R10. Orden de profundidad e hit-testing con personajes
 
 - **Decision**: `sceneOrder(layout, characters)` mezcla objetos y personajes con la clave de la 001
-  ampliada a `(front, back, z, idTiebreak, sub)`:
-  - Objetos: `(xMax+yMax, xMin+yMin, z, id, 0)` (igual que la 001).
+  ampliada a `(front, back, z, idTiebreak, depth, teamIndex)`:
+  - Objetos: `(xMax+yMax, xMin+yMin, z, id)` (igual que la 001).
   - Personaje: tile de referencia = el de mayor `x+y` entre su tile y el siguiente (si camina). Si ese
     tile está en la huella de un objeto no bloqueante de suelo (silla, sofá), usa la clave de ese
-    objeto con `sub = 1 + índice de equipo` (se dibuja justo encima de la silla o el sofá); si no,
-    `(x+y, x+y, 0, '￿', 1 + índice)`. Así, a igual profundidad, gana el de número mayor (FR-023).
+    objeto y va justo después de él (se dibuja encima de la silla o el sofá); si no,
+    `(x+y, x+y, 0, U+FFFF)` (después de cualquier id de objeto). Entre personajes con la misma clave
+    decide la profundidad fraccional `position.x + position.y` (dos agentes que se cruzan en el mismo
+    segmento invierten su orden al cruzarse) y, si también empata, va después el de número mayor
+    (FR-023).
   - `characterSilhouette(position)` es un rectángulo del cuerpo (sin burbuja ni anillo) anclado al
     centro del tile en mundo; `sceneHitTest` recorre `sceneOrder` al revés con la silueta de cada
     elemento y cae al suelo como la 001. El dibujo del personaje cabe en esa silueta.
