@@ -7,6 +7,7 @@ function setup() {
     panBy: vi.fn(),
     zoomAt: vi.fn(),
     recenter: vi.fn(),
+    toggleDebug: vi.fn(),
     getViewport: vi.fn(() => ({ width: 1280, height: 800 })),
   };
   return { actions, input: createKeyboardInput(actions) };
@@ -114,7 +115,29 @@ describe('keyboard camera input', () => {
     expect(actions.recenter).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['g', 'G', 'Escape'])('leaves %s untouched', (key) => {
+  it.each(['g', 'G'])('toggles debug mode on %s and prevents its default (FR-023)', (key) => {
+    const { actions, input } = setup();
+    const event = keyEvent(key);
+    input.handleKeyDown(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(actions.toggleDebug).toHaveBeenCalledTimes(1);
+    input.handleKeyUp(keyEvent(key, {}, 'keyup'));
+    input.handleKeyDown(keyEvent(key));
+    expect(actions.toggleDebug).toHaveBeenCalledTimes(2);
+    input.tick(100);
+    expect(actions.panBy).not.toHaveBeenCalled();
+  });
+
+  it('does not toggle debug again on auto-repeat while G is held', () => {
+    const { actions, input } = setup();
+    input.handleKeyDown(keyEvent('g'));
+    const repeat = keyEvent('g', { repeat: true });
+    input.handleKeyDown(repeat);
+    expect(actions.toggleDebug).toHaveBeenCalledTimes(1);
+    expect(repeat.defaultPrevented).toBe(true);
+  });
+
+  it.each(['Escape', 'q'])('leaves %s untouched', (key) => {
     const { actions, input } = setup();
     const event = keyEvent(key);
     input.handleKeyDown(event);
@@ -123,6 +146,7 @@ describe('keyboard camera input', () => {
     expect(actions.panBy).not.toHaveBeenCalled();
     expect(actions.zoomAt).not.toHaveBeenCalled();
     expect(actions.recenter).not.toHaveBeenCalled();
+    expect(actions.toggleDebug).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -136,20 +160,21 @@ describe('keyboard camera input', () => {
     container.innerHTML = markup;
     const target = container.querySelector(selector)!;
     container.addEventListener('keydown', input.handleKeyDown);
-    for (const key of ['ArrowRight', '+', '0']) {
+    for (const key of ['ArrowRight', '+', '0', 'g']) {
       expect(target.dispatchEvent(keyEvent(key))).toBe(true);
     }
     input.tick(100);
     expect(actions.panBy).not.toHaveBeenCalled();
     expect(actions.zoomAt).not.toHaveBeenCalled();
     expect(actions.recenter).not.toHaveBeenCalled();
+    expect(actions.toggleDebug).not.toHaveBeenCalled();
   });
 
   it.each([{ ctrlKey: true }, { metaKey: true }, { altKey: true }])(
     'ignores modified keydown (%j)',
     (modifier) => {
       const { actions, input } = setup();
-      for (const key of ['ArrowRight', '+', '=', '-', '0']) {
+      for (const key of ['ArrowRight', '+', '=', '-', '0', 'g']) {
         const event = keyEvent(key, modifier);
         input.handleKeyDown(event);
         expect(event.defaultPrevented).toBe(false);
@@ -158,6 +183,7 @@ describe('keyboard camera input', () => {
       expect(actions.panBy).not.toHaveBeenCalled();
       expect(actions.zoomAt).not.toHaveBeenCalled();
       expect(actions.recenter).not.toHaveBeenCalled();
+      expect(actions.toggleDebug).not.toHaveBeenCalled();
     },
   );
 
