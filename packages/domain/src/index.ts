@@ -15,3 +15,6 @@ export { footprint, isWalkable, reachableFrom, walkability } from './scene/walka
 export { drawOrder } from './scene/drawOrder';
 export { hitTest, silhouette } from './scene/hitTest';
 export { findPath } from './path/findPath';
+export * from './agents/stateMachine';
+export * from './agents/rng';
+export * from './agents/selection';
