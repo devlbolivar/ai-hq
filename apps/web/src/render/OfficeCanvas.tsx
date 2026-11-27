@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Application, Container, type Ticker } from 'pixi.js';
+import { Application, Container, Graphics, type Ticker } from 'pixi.js';
 import { drawOrder, ZOOM_MAX, type Camera, type Point } from '@ai-hq/domain';
 import { attachKeyboard, createKeyboardInput } from '../input/keyboard';
 import { attachMouse, createMouseInput } from '../input/mouse';
@@ -7,11 +7,14 @@ import { officeStore, type OfficeStore } from '../state/store';
 import { installTestHook } from '../testHook';
 import { drawFloor } from './drawFloor';
 import { drawObject } from './drawObject';
+import { drawOverlay } from './drawOverlay';
 import { theme } from './palette';
 
 interface Scene {
   readonly root: Container;
   readonly order: string[];
+  /** Hover highlight, redrawn when `hover` changes. */
+  readonly highlight: Graphics;
 }
 
 function buildScene(store: OfficeStore): Scene {
@@ -32,8 +35,10 @@ function buildScene(store: OfficeStore): Scene {
   }
 
   const overlay = new Container({ label: 'overlay' });
+  const highlight = new Graphics({ label: 'hover' });
+  overlay.addChild(highlight);
   root.addChild(floor, objects, overlay);
-  return { root, order };
+  return { root, order, highlight };
 }
 
 /** Mouse and keyboard drive the camera and hover through the store; returns a detach function. */
@@ -99,11 +104,13 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
         }
         host.appendChild(app.canvas);
 
-        const { root, order } = buildScene(store);
+        const { root, order, highlight } = buildScene(store);
         app.stage.addChild(root);
         applyCamera(root, store.getState().camera);
+        drawOverlay(highlight, store.getState().hover, store.getState().layout);
         unsubscribe = store.subscribe((state, prev) => {
           if (state.camera !== prev.camera) applyCamera(root, state.camera);
+          if (state.hover !== prev.hover) drawOverlay(highlight, state.hover, state.layout);
         });
 
         app.renderer.on('resize', (width: number, height: number) =>

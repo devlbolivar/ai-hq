@@ -23,6 +23,7 @@ export const theme = {
   screenBody: 0x171b26,
   whiteboardFace: 0xd9dee8,
   text: 0xe5e7eb,
+  hover: { line: 0x7dd3fc, fill: 0x7dd3fc, footprintAlpha: 0.28, outlineAlpha: 0.12 },
 } as const;
 
 export const networkStyles: Readonly<Record<SocialNetwork, NetworkStyle>> = {
