@@ -27,7 +27,7 @@ describe('PathStatus', () => {
     expect(screen.queryByRole('status')).toBeNull();
 
     act(() => store.getState().selectTile({ x: 3, y: 9 }));
-    expect(screen.getByRole('status').textContent).toBe('Ruta: 7 pasos');
+    expect(screen.getByRole('status', { name: 'Ruta: 7 pasos' }).textContent).toBe('Ruta: 7 pasos');
 
     act(() => store.getState().toggleDebug());
     expect(screen.queryByRole('status')).toBeNull();
@@ -42,14 +42,14 @@ describe('PathStatus', () => {
       store.getState().selectTile(marketingLayout.entrance);
       store.getState().selectTile(destination);
     });
-    expect(screen.getByRole('status').textContent).toBe(expected);
+    expect(screen.getByRole('status', { name: expected }).textContent).toBe(expected);
   });
 
   it.each(['blocked', 'unreachable', 'out-of-bounds'] as const)(
     'shows "Sin ruta" for %s',
     (reason) => {
       renderStatus({ ...IDLE_DEBUG, enabled: true, result: { ok: false, reason } });
-      expect(screen.getByRole('status').textContent).toBe('Sin ruta');
+      expect(screen.getByRole('status', { name: 'Sin ruta' }).textContent).toBe('Sin ruta');
     },
   );
 });
