@@ -58,6 +58,10 @@ const AGENT_FUNCTIONS = [
   'validateTeam',
   'validateAgentDraft',
   'applyDraft',
+  'positionToWorld',
+  'characterSilhouette',
+  'sceneOrder',
+  'sceneHitTest',
 ] as const;
 
 describe('@ai-hq/domain agent exports (002 contracts/domain-api.md)', () => {
@@ -76,6 +80,7 @@ describe('@ai-hq/domain agent exports (002 contracts/domain-api.md)', () => {
     'NAME_MAX',
     'ROLE_MAX',
     'SYSTEM_PROMPT_MAX',
+    'CHARACTER_BODY',
   ])('exports %s', (name) => {
     expect(domain).toHaveProperty(name);
   });
