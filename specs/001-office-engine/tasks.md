@@ -115,8 +115,8 @@ objetos del layout en el orden de `drawOrder()` del dominio, cámara a 1x centra
 - [x] T045 [US2] GREEN: implement `apps/web/src/input/mouse.ts`
 - [x] T046 [P] [US2] RED: keyboard tests in `apps/web/test/input/keyboard.test.ts` — key map per contracts/ui-contract.md (arrows/WASD, `+`/`=`, `-`, `0`); held keys pan at 600 px/s via `tick(dt)`; ignored when focus is in `input`/`textarea`/`select`/`[contenteditable]`
 - [x] T047 [US2] GREEN: implement `apps/web/src/input/keyboard.ts`
-- [ ] T048 [P] [US2] RED: `apps/web/test/ui/RecenterButton.test.tsx` — role `button` named "Recentrar", click calls `recenter`, carries `data-ui-control`
-- [ ] T049 [US2] GREEN: implement `apps/web/src/ui/RecenterButton.tsx`
+- [x] T048 [P] [US2] RED: `apps/web/test/ui/RecenterButton.test.tsx` — role `button` named "Recentrar", click calls `recenter`, carries `data-ui-control`
+- [x] T049 [US2] GREEN: implement `apps/web/src/ui/RecenterButton.tsx`
 - [ ] T050 [US2] Wire mouse and keyboard input into `apps/web/src/render/OfficeCanvas.tsx` and `RecenterButton` into `apps/web/src/App.tsx`; make T038 and T039 pass
 
 **Checkpoint**: US1 + US2 funcionan de forma independiente
