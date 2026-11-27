@@ -189,7 +189,7 @@ describe('applyOrder — mid-step and go-to', () => {
 
   it.each([
     ['a use point', { x: 13, y: 7 }],
-    ['a tile occupied by another agent', { x: 3, y: 6 }],
+    ['a tile occupied by another agent', { x: 11, y: 8 }],
     ['a tile chosen by another agent', { x: 11, y: 9 }],
     ['a blocked tile', { x: 3, y: 5 }],
     ['a tile outside the grid', { x: 30, y: 30 }],
