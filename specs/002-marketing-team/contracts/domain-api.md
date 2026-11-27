@@ -1,0 +1,305 @@
+# Contract: API pública de `@ai-hq/domain` (feature 002)
+
+Amplía la API de la 001 ([contrato de la 001](../../001-office-engine/contracts/domain-api.md)), que no
+cambia salvo lo que añade el fix `fix/001-review` (`MISSING_USE_POINT`, `INVALID_GEOMETRY`). Todo son
+funciones puras, sin I/O, sin `Date`, sin `Math.random` y sin dependencias de navegador. Ninguna
+función muta sus argumentos. Tipos en [data-model.md](../data-model.md). Todo se reexporta desde
+`packages/domain/src/index.ts`.
+
+Bloques y responsables (research R1):
+
+| Bloque | Archivos | Responsable |
+|---|---|---|
+| Tanda 1 | `agents/types.ts`, `agents/catalog.ts`, `agents/seed.ts`, `agents/prompt.ts`, `agents/validate.ts`, `agents/stateMachine.ts` | Codex |
+| Tanda 2 | `agents/rng.ts`, `agents/usePoints.ts`, `agents/movement.ts`, `agents/autonomy.ts`, `agents/orders.ts`, `agents/simulation.ts`, `agents/selection.ts` | Codex |
+| Geometría | `scene/sceneOrder.ts`, `scene/characterHit.ts`, `camera/follow.ts` | Claude |
+
+## Tanda 1
+
+### Tipos y catálogo (`agents/types.ts`, `agents/catalog.ts`)
+
+```ts
+type AgentColorId = 'coral' | 'amber' | 'lime' | 'emerald' | 'sky' | 'indigo' | 'violet' | 'rose'
+  | 'sand' | 'slate'
+type SkinTone = 'skin-1' | 'skin-2' | 'skin-3' | 'skin-4'
+type HairStyle = 'short' | 'long' | 'curly' | 'bun'
+type HairColor = 'black' | 'brown' | 'auburn' | 'blonde' | 'gray'
+type Accessory = 'none' | 'glasses' | 'headphones' | 'cap'
+
+interface CatalogEntry<Id extends string> { readonly id: Id; readonly name: string }
+interface ColorEntry<Id extends string> extends CatalogEntry<Id> { readonly hex: number }
+
+const AGENT_COLORS: readonly ColorEntry<AgentColorId>[]   // 10, hex distintos
+const SKIN_TONES: readonly ColorEntry<SkinTone>[]         // 4
+const HAIR_STYLES: readonly CatalogEntry<HairStyle>[]     // 4
+const HAIR_COLORS: readonly ColorEntry<HairColor>[]       // 5
+const ACCESSORIES: readonly CatalogEntry<Accessory>[]     // 4, incluye 'none'
+function agentColorHex(id: AgentColorId): number
+```
+
+- `name` en español (lo muestra el editor). Ids únicos en cada lista; `hex` en `0x000000–0xffffff`.
+
+### Perfiles y semilla (`agents/types.ts`, `agents/seed.ts`)
+
+```ts
+interface Appearance { skinTone: SkinTone; hairStyle: HairStyle; hairColor: HairColor;
+  accessory: Accessory }                                   // todos readonly
+interface AgentProfile { id: string; name: string; role: string; color: AgentColorId;
+  appearance: Appearance; deskId: string; systemPrompt: string }   // todos readonly
+type AgentDraft = Pick<AgentProfile, 'name' | 'role' | 'color' | 'appearance' | 'systemPrompt'>
+
+const marketingTeam: readonly AgentProfile[]
+const NAME_MAX = 30, ROLE_MAX = 40, SYSTEM_PROMPT_MAX = 4000
+```
+
+- Exactamente 6 perfiles en el orden de FR-001; ids `head-of-marketing`, `trend-scout`,
+  `copywriter`, `scriptwriter`, `designer`, `community-manager`; nombres = rol en inglés
+  ("Head of Marketing", …); roles en español ("Estratega", "Investigador", "Redactor", "Guionista",
+  "Diseño", "Comunidad"); `deskId` = `desk-1` … `desk-6` en orden.
+- Colores distintos y combinaciones de apariencia distintas (FR-003).
+- `systemPrompt` en español, describe rol y tareas según FR-004 y **no** contiene la regla de cero
+  invenciones.
+- `validateTeam(marketingTeam, marketingLayout).ok === true`.
+
+### Prompt efectivo (`agents/prompt.ts`)
+
+```ts
+const ZERO_INVENTION_RULE: string
+function effectivePrompt(profile: Pick<AgentProfile, 'systemPrompt'>): string
+```
+
+- `effectivePrompt(p) === ZERO_INVENTION_RULE + '\n\n' + stripped`, donde `stripped` es
+  `p.systemPrompt` sin apariciones literales de `ZERO_INVENTION_RULE`, recortado.
+- Para todo `p`, la regla aparece exactamente una vez en `effectivePrompt(p)` (FR-005).
+- `ZERO_INVENTION_RULE` menciona métricas, estadísticas, testimonios, citas, tendencias y datos de
+  terceros, y pide solicitar el dato que falte (constitución V).
+
+### Validación (`agents/validate.ts`)
+
+```ts
+type AgentErrorCode = 'DUPLICATE_ID' | 'DUPLICATE_DESK' | 'DUPLICATE_COLOR' | 'DUPLICATE_NAME'
+  | 'UNKNOWN_DESK' | 'UNKNOWN_COLOR' | 'UNKNOWN_APPEARANCE' | 'EMPTY_FIELD' | 'TOO_LONG'
+interface AgentError { code: AgentErrorCode; agentId: string; field: string; message: string }
+type TeamValidationResult = { ok: true } | { ok: false; errors: readonly AgentError[] }
+
+function validateTeam(profiles: readonly AgentProfile[], layout: OfficeLayout): TeamValidationResult
+
+type DraftField = 'name' | 'role' | 'color' | 'systemPrompt'
+type AgentDraftErrors = Partial<Record<DraftField, string>>
+function validateAgentDraft(draft: AgentDraft, team: readonly AgentProfile[], agentId: string):
+  AgentDraftErrors
+function applyDraft(profile: AgentProfile, draft: AgentDraft): AgentProfile
+```
+
+- `validateTeam` reporta todos los errores juntos (tabla de data-model.md). `field` es el nombre del
+  campo (`appearance.hairStyle` para apariencia). `message` en español con nombre o id del agente y
+  campo. Una apariencia fuera del catálogo no lanza excepción.
+- `validateAgentDraft`: `{}` si es válido. Compara nombre y color con los demás agentes de `team`
+  (excluye `agentId`). Un color fuera del catálogo también es error de `color`. Mensajes en español,
+  p. ej. "El nombre es obligatorio", "Máximo 30 caracteres", "Ya hay un agente con ese nombre", "Ese
+  color ya lo usa Copywriter".
+- `applyDraft` conserva `id` y `deskId` y recorta `name`, `role` y `systemPrompt`.
+
+### Máquina de estados (`agents/stateMachine.ts`)
+
+```ts
+type AgentStatus = 'idle' | 'walking' | 'working' | 'meeting' | 'break' | 'waiting_review'
+type ActivityStatus = 'working' | 'meeting' | 'break' | 'waiting_review'
+const AGENT_STATUSES: readonly AgentStatus[]              // en el orden de arriba
+function isActivityStatus(s: AgentStatus): s is ActivityStatus
+
+type TransitionTrigger =
+  | { type: 'walk-to'; reachable: boolean }
+  | { type: 'start-activity'; activity: ActivityStatus; onFreeUsePoint: boolean }
+  | { type: 'arrive'; activity: ActivityStatus | null; atTarget: boolean }
+  | { type: 'cancel' }
+  | { type: 'finish' }
+type TransitionRejection = 'INVALID_TRANSITION' | 'UNREACHABLE' | 'NOT_ON_FREE_USE_POINT'
+  | 'NOT_ARRIVED'
+type TransitionResult = { ok: true; status: AgentStatus } | { ok: false; reason: TransitionRejection }
+
+function transition(from: AgentStatus, trigger: TransitionTrigger): TransitionResult
+```
+
+| `from` | Disparador aceptado | Resultado |
+|---|---|---|
+| `idle` | `walk-to` (`reachable`) | `walking` |
+| `idle` | `start-activity` (`onFreeUsePoint`) | `activity` |
+| `walking` | `walk-to` (`reachable`) | `walking` |
+| `walking` | `arrive` (`atTarget`) | `activity` o `idle` (si `activity: null`) |
+| `walking` | `cancel` | `idle` |
+| actividad | `walk-to` (`reachable`) | `walking` |
+| actividad | `cancel` / `finish` | `idle` |
+
+- Todo lo demás → `INVALID_TRANSITION` (p. ej. `start-activity` desde `walking` o desde una actividad,
+  `arrive` fuera de `walking`, `cancel`/`finish` desde `idle`, `finish` desde `walking`).
+- Disparador aceptado con la condición en `false` → su motivo (`UNREACHABLE`, `NOT_ON_FREE_USE_POINT`,
+  `NOT_ARRIVED`). El tipo de par se comprueba antes que la condición.
+- Tests: los 36 pares (origen, destino) según research R2 (SC-003).
+
+## Tanda 2
+
+### PRNG (`agents/rng.ts`)
+
+```ts
+type RngState = number                                    // uint32
+function seedRng(seed: number): RngState
+function nextFloat(state: RngState): readonly [value: number, next: RngState]      // [0, 1)
+function randomInt(state: RngState, min: number, max: number): readonly [number, RngState] // inclusivo
+function pick<T>(state: RngState, items: readonly T[]): readonly [T, RngState]    // items no vacío
+```
+
+- `mulberry32`; misma semilla → misma secuencia; `seedRng` acepta cualquier número (lo normaliza).
+
+### Puntos de uso y reservas (`agents/usePoints.ts`)
+
+```ts
+interface UsePointRef { objectId: string; index: number }
+type Activity = 'work' | 'meeting' | 'break' | 'review' | 'whiteboard' | 'wander'
+function usePointKey(ref: UsePointRef): string            // "objectId#index"
+function resolveUsePoint(layout: OfficeLayout, ref: UsePointRef): UsePoint
+function usePointsFor(world: SimWorld, agentId: string, activity: Activity): readonly UsePointRef[]
+function isReservedByOther(sim: Simulation, ref: UsePointRef, agentId: string): boolean
+function freeUsePointsFor(sim: Simulation, world: SimWorld, agentId: string, activity: Activity):
+  readonly UsePointRef[]
+function activityStatus(activity: Activity): ActivityStatus | null  // whiteboard/wander → null
+```
+
+- `usePointsFor`: `work` → solo el punto del escritorio del agente; `meeting` → los de
+  `meeting-table`; `break` → cafetera y luego sofá; `review`/`whiteboard` → pizarra; `wander` → `[]`.
+  Orden: el de `layout.objects` y luego `index`.
+
+### Estado de un agente (`agents/types.ts`)
+
+```ts
+interface AgentTarget { activity: Activity; tile: Coord; usePoint: UsePointRef | null;
+  facing: Direction | null }
+interface AgentRuntime {
+  id: string; status: AgentStatus; tile: Coord; next: Coord | null; stepMs: number;
+  route: readonly Coord[]; facing: Direction; target: AgentTarget | null;
+  reservation: UsePointRef | null; forced: boolean; timerMs: number | null; celebrateMs: number
+}                                                         // todos readonly; reglas en data-model.md
+```
+
+### Movimiento (`agents/movement.ts`)
+
+```ts
+const STEP_DURATION_MS = 500
+function agentPosition(agent: AgentRuntime): Point        // grid fraccional, sobre el segmento
+function directionBetween(from: Coord, to: Coord): Direction
+function planRoute(world: SimWorld, from: Coord, to: Coord): readonly Coord[] | null
+function advanceMovement(agent: AgentRuntime, dtMs: number): { agent: AgentRuntime; arrived: boolean }
+```
+
+- `planRoute` usa `findPath` de la 001; devuelve los tiles **después** de `from` (vacío si
+  `from = to`) o `null` si no hay ruta.
+- `advanceMovement` avanza `dtMs` (múltiplo de `SIM_STEP_MS`) sobre `next`/`route`; al completar un
+  paso, `tile = next`, toma el siguiente de `route` y actualiza `facing`; `arrived` es `true` en el
+  paso en que alcanza el último tile. Nunca salta tiles ni sale de la ruta.
+
+### Autonomía (`agents/autonomy.ts`)
+
+```ts
+const IDLE_PAUSE_MS: readonly [3000, 8000]
+const WORK_MS: readonly [10000, 20000]
+const BREAK_MS: readonly [5000, 10000]
+const CELEBRATE_MS = 1000
+const AUTONOMOUS_ACTIVITIES: readonly Activity[]          // ['work', 'break', 'whiteboard', 'wander']
+function chooseAutonomousTarget(sim: Simulation, world: SimWorld, agentId: string):
+  { target: AgentTarget | null; rng: RngState }
+```
+
+- Elige actividad con el PRNG; si no tiene destino libre y alcanzable, prueba las siguientes en el
+  orden de `AUTONOMOUS_ACTIVITIES` empezando por la elegida (research R8). `null` si ninguna.
+- `wander`: tile caminable que no es punto de uso de ningún objeto, distinto de su tile y no ocupado
+  ni elegido como destino por otro agente.
+- Nunca devuelve `meeting` ni `review` (FR-018).
+
+### Órdenes (`agents/orders.ts`)
+
+```ts
+type Order =
+  | { type: 'activity'; activity: 'work' | 'meeting' | 'break' | 'review' }
+  | { type: 'go-to'; tile: Coord }
+  | { type: 'idle' }
+type OrderResult =
+  | { ok: true; changed: boolean }
+  | { ok: false; reason: 'NO_FREE_SPOT' | 'UNREACHABLE' | 'UNKNOWN_AGENT' }
+function applyOrder(sim: Simulation, world: SimWorld, agentId: string, order: Order):
+  { sim: Simulation; result: OrderResult }
+function cancelForcedOrders(sim: Simulation): Simulation
+```
+
+- Orden aceptada: interrumpe al instante la actividad autónoma (sin celebrar), marca `forced`, libera la
+  reserva anterior y reserva el nuevo punto. Origen de la ruta: `next` si va a mitad de paso, si no
+  `tile` (Clarifications). Punto elegido: el libre más cercano por longitud de ruta; empate → orden de
+  `usePointsFor`. `work` → siempre su escritorio.
+- Si ya está en el punto elegido: `idle → actividad` directamente (`start-activity`).
+- `NO_FREE_SPOT` / `UNREACHABLE` → `sim` sin cambios (mismo objeto).
+- Misma actividad que su `target` actual (en ella o caminando hacia ella) → `{ ok: true, changed:
+  false }` y `sim` sin cambios.
+- `idle`: si camina, termina el paso en curso y queda en `idle` liberando la reserva; si está en una
+  actividad, `idle` en su sitio conservando la reserva. Quita `forced` y programa la pausa de reposo.
+- `go-to`: como una orden sin actividad hacia un tile caminable (termina en `idle`, `forced`).
+- `cancelForcedOrders`: para cada agente con `forced`, el mismo efecto que `{ type: 'idle' }`.
+
+### Simulación (`agents/simulation.ts`)
+
+```ts
+const SIM_STEP_MS = 10
+const MAX_FRAME_MS = 250
+const ACCEPTANCE_SEED: number
+interface SimWorld { layout: OfficeLayout; walk: WalkabilityGrid; team: readonly AgentProfile[] }
+interface Simulation { timeMs: number; rng: RngState; agents: readonly AgentRuntime[] }
+function createSimWorld(layout: OfficeLayout, team: readonly AgentProfile[]): SimWorld
+function createSimulation(world: SimWorld, seed: number): Simulation
+function stepSimulation(sim: Simulation, world: SimWorld): Simulation     // +SIM_STEP_MS
+function advanceFrame(sim: Simulation, world: SimWorld, accumulatorMs: number, frameDtMs: number):
+  { sim: Simulation; accumulatorMs: number }
+function agentById(sim: Simulation, id: string): AgentRuntime | undefined
+```
+
+- `createSimWorld` lanza `Error` con todos los mensajes si `validateLayout` o `validateTeam` fallan.
+- `createSimulation`: todos en `idle` sobre el punto de su escritorio, mirando según el punto, con su
+  reserva y una pausa de reposo sorteada (FR-007).
+- `stepSimulation` procesa los agentes en orden de equipo: movimiento, llegadas (`arrive`), fin de
+  actividad (`finish`, con celebración si es `working` autónomo), fin de celebración, vencimiento de
+  la pausa (decisión autónoma). Los agentes `forced` no deciden ni terminan por tiempo.
+- `advanceFrame` limita `frameDtMs` a `MAX_FRAME_MS`, ejecuta `floor((acc + dt) / SIM_STEP_MS)` pasos
+  y devuelve el resto. Dos secuencias de cuadros que suman el mismo tiempo dan el mismo `Simulation`
+  (SC-006).
+- Con `ACCEPTANCE_SEED`, cada agente completa al menos un ciclo autónomo en 60 000 ms simulados
+  (SC-005).
+
+### Selección (`agents/selection.ts`)
+
+```ts
+function selectByNumber(teamIds: readonly string[], current: string | null, n: number): string | null
+function cycleSelection(teamIds: readonly string[], current: string | null, direction: 1 | -1):
+  string | null
+```
+
+- `selectByNumber`: `n` en 1..9; sin agente en esa posición devuelve `current` (sin cambios).
+- `cycleSelection`: siguiente/anterior cíclico; sin selección, `1` → primero y `-1` → último; equipo
+  vacío → `null`.
+
+## Geometría de escena (Claude)
+
+```ts
+interface CharacterPlacement { id: string; teamIndex: number; position: Point; tile: Coord;
+  next: Coord | null }
+type SceneItem = { type: 'object'; id: string } | { type: 'agent'; id: string }
+type SceneHoverTarget = HoverTarget | { type: 'agent'; id: string }
+const CHARACTER_BODY: { width: number; height: number }
+function sceneOrder(layout: OfficeLayout, characters: readonly CharacterPlacement[]): SceneItem[]
+function characterSilhouette(position: Point, tileSize?: TileSize): Point[]
+function sceneHitTest(worldPoint: Point, layout: OfficeLayout,
+  characters: readonly CharacterPlacement[]): SceneHoverTarget
+function centerOn(camera: Camera, worldPoint: Point, viewport: Viewport, layout: OfficeLayout): Camera
+```
+
+- `sceneOrder` sin personajes ≡ `drawOrder` de la 001. Clave de research R10; empate entre personajes
+  → gana (va después) el de mayor `teamIndex` (FR-023).
+- `sceneHitTest` recorre `sceneOrder` al revés: objetos con su silueta de la 001, personajes con
+  `characterSilhouette`; luego suelo; luego `null`.
+- `centerOn` conserva el zoom y aplica el límite de cámara de la 001 (FR-028).
