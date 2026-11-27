@@ -40,7 +40,7 @@ describe('drawOrder (FR-012, research R4)', () => {
   it('draws wall segments before the objects in front of them', () => {
     expect(indexOf('wall-0-5')).toBeLessThan(indexOf('desk-1'));
     expect(indexOf('wall-0-10')).toBeLessThan(indexOf('plant-3'));
-    expect(indexOf('wall-0-2')).toBeLessThan(indexOf('plant-1'));
+    expect(indexOf('wall-0-1')).toBeLessThan(indexOf('plant-1'));
     expect(indexOf('wall-12-0')).toBeLessThan(indexOf('meeting-table'));
     expect(indexOf('screen-youtube')).toBeLessThan(indexOf('desk-2'));
     expect(indexOf('whiteboard')).toBeLessThan(indexOf('desk-1'));
