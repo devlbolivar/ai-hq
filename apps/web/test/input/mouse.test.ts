@@ -4,11 +4,16 @@ import {
   attachMouse,
   createMouseInput,
   DRAG_THRESHOLD_PX,
-  type MouseCameraActions,
+  type MouseActions,
 } from '../../src/input/mouse';
 
 function makeActions() {
-  return { panBy: vi.fn(), zoomAt: vi.fn() } satisfies MouseCameraActions;
+  return {
+    panBy: vi.fn(),
+    zoomAt: vi.fn(),
+    pointerMove: vi.fn(),
+    pointerLeave: vi.fn(),
+  } satisfies MouseActions;
 }
 
 const canvas = () => document.body;
@@ -135,6 +140,66 @@ describe('mouse input — wheel zoom (FR-014)', () => {
   });
 });
 
+describe('mouse input — hover (FR-017–FR-019)', () => {
+  function hostAt(left: number, top: number) {
+    const host = document.createElement('div');
+    host.innerHTML = '<canvas></canvas>';
+    host.getBoundingClientRect = () => ({ left, top }) as DOMRect;
+    document.body.appendChild(host);
+    return { host, canvasEl: host.querySelector('canvas') };
+  }
+
+  it('a move without a pressed button updates the hover with host-relative coordinates', () => {
+    const { host, canvasEl } = hostAt(50, 30);
+    const actions = makeActions();
+    const mouse = createMouseInput(actions, host);
+    mouse.handlePointerMove(pointer(150, 130, { target: canvasEl }));
+    expect(actions.pointerMove).toHaveBeenCalledWith({ x: 100, y: 100 });
+    expect(actions.panBy).not.toHaveBeenCalled();
+  });
+
+  it('keeps updating the hover below the drag threshold but not while dragging', () => {
+    const actions = makeActions();
+    const mouse = createMouseInput(actions);
+    mouse.handlePointerDown(pointer(100, 100));
+    mouse.handlePointerMove(pointer(102, 101));
+    expect(actions.pointerMove).toHaveBeenCalledTimes(1);
+    mouse.handlePointerMove(pointer(140, 100));
+    mouse.handlePointerMove(pointer(160, 100));
+    expect(actions.panBy).toHaveBeenCalledTimes(2);
+    expect(actions.pointerMove).toHaveBeenCalledTimes(1);
+    mouse.handlePointerUp(pointer(160, 100));
+    mouse.handlePointerMove(pointer(161, 100));
+    expect(actions.pointerMove).toHaveBeenCalledTimes(2);
+  });
+
+  it('a move over a [data-ui-control] or outside the host clears the hover once', () => {
+    const { host, canvasEl } = hostAt(0, 0);
+    document.body.insertAdjacentHTML('beforeend', '<button data-ui-control>Recentrar</button>');
+    const button = document.querySelector('button');
+    const actions = makeActions();
+    const mouse = createMouseInput(actions, host);
+
+    mouse.handlePointerMove(pointer(10, 10, { target: canvasEl }));
+    mouse.handlePointerMove(pointer(20, 20, { target: button }));
+    mouse.handlePointerMove(pointer(21, 21, { target: button }));
+    mouse.handlePointerMove(pointer(22, 22, { target: document.body }));
+    expect(actions.pointerMove).toHaveBeenCalledTimes(1);
+    expect(actions.pointerLeave).toHaveBeenCalledTimes(1);
+
+    mouse.handlePointerMove(pointer(30, 30, { target: canvasEl }));
+    expect(actions.pointerMove).toHaveBeenCalledTimes(2);
+  });
+
+  it('leaving the host clears the hover', () => {
+    const actions = makeActions();
+    const mouse = createMouseInput(actions);
+    mouse.handlePointerMove(pointer(10, 10));
+    mouse.handlePointerLeave();
+    expect(actions.pointerLeave).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('attachMouse', () => {
   function fire(target: EventTarget, type: string, init: MouseEventInit) {
     target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, ...init }));
@@ -162,5 +227,23 @@ describe('attachMouse', () => {
     host.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, cancelable: true }));
     expect(actions.panBy).toHaveBeenCalledTimes(1);
     expect(actions.zoomAt).toHaveBeenCalledTimes(1);
+  });
+
+  it('hovers on window pointermove without a button and clears on host pointerleave', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const actions = makeActions();
+    const detach = attachMouse(host, createMouseInput(actions, host));
+
+    fire(host, 'pointermove', { clientX: 40, clientY: 25 });
+    expect(actions.pointerMove).toHaveBeenCalledWith({ x: 40, y: 25 });
+    host.dispatchEvent(new MouseEvent('pointerleave'));
+    expect(actions.pointerLeave).toHaveBeenCalledTimes(1);
+
+    detach();
+    fire(host, 'pointermove', { clientX: 50, clientY: 25 });
+    host.dispatchEvent(new MouseEvent('pointerleave'));
+    expect(actions.pointerMove).toHaveBeenCalledTimes(1);
+    expect(actions.pointerLeave).toHaveBeenCalledTimes(1);
   });
 });

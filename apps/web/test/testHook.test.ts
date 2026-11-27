@@ -67,6 +67,14 @@ describe('installTestHook', () => {
     expect(hook.camera).toEqual(moved);
   });
 
+  it('reads the hover live from the store (FR-017–FR-019)', () => {
+    const { store, hook } = install();
+    store.setState({ hover: { type: 'object', id: 'meeting-table' } });
+    expect(hook.hover).toEqual({ type: 'object', id: 'meeting-table' });
+    store.getState().pointerLeave();
+    expect(hook.hover).toBeNull();
+  });
+
   it('marks the scene ready with its draw order', () => {
     const { controls, hook } = install();
     controls.markReady(['wall-0-1', 'desk-1']);
