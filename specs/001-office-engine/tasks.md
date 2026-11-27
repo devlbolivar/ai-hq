@@ -111,8 +111,8 @@ objetos del layout en el orden de `drawOrder()` del dominio, cámara a 1x centra
 - [x] T041 [US2] GREEN: implement `pan`, `zoomAt`, `recenter`, camera clamping and constants in `packages/domain/src/camera/ops.ts`; export from `packages/domain/src/index.ts`
 - [x] T042 [US2] RED: store camera action tests in `apps/web/test/state/camera-actions.test.ts` — `panBy`, `zoomAt`, `recenter` delegate to the domain; `setViewport` clamps the current camera
 - [x] T043 [US2] GREEN: add camera actions to `apps/web/src/state/store.ts`
-- [ ] T044 [P] [US2] RED: mouse input tests in `apps/web/test/input/mouse.test.ts` — primary button only; < 4 px is not a drag; gestures starting on `[data-ui-control]` are ignored; wheel calls `zoomAt` at the cursor with one `ZOOM_STEP` per notch
-- [ ] T045 [US2] GREEN: implement `apps/web/src/input/mouse.ts`
+- [x] T044 [P] [US2] RED: mouse input tests in `apps/web/test/input/mouse.test.ts` — primary button only; < 4 px is not a drag; gestures starting on `[data-ui-control]` are ignored; wheel calls `zoomAt` at the cursor with one `ZOOM_STEP` per notch
+- [x] T045 [US2] GREEN: implement `apps/web/src/input/mouse.ts`
 - [x] T046 [P] [US2] RED: keyboard tests in `apps/web/test/input/keyboard.test.ts` — key map per contracts/ui-contract.md (arrows/WASD, `+`/`=`, `-`, `0`); held keys pan at 600 px/s via `tick(dt)`; ignored when focus is in `input`/`textarea`/`select`/`[contenteditable]`
 - [x] T047 [US2] GREEN: implement `apps/web/src/input/keyboard.ts`
 - [ ] T048 [P] [US2] RED: `apps/web/test/ui/RecenterButton.test.tsx` — role `button` named "Recentrar", click calls `recenter`, carries `data-ui-control`
