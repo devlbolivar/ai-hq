@@ -1,9 +1,12 @@
 import { ZOOM_STEP, type Point } from '@ai-hq/domain';
 
-/** Camera actions the mouse drives; the store provides them. */
-export interface MouseCameraActions {
+/** Store actions the mouse drives: camera (drag, wheel) and hover (move, leave). */
+export interface MouseActions {
   panBy(delta: Point): void;
   zoomAt(anchor: Point, factor: number): void;
+  /** Pointer position relative to the canvas host. */
+  pointerMove(screenPoint: Point): void;
+  pointerLeave(): void;
 }
 
 /** The fields of a `PointerEvent` the mouse input reads. */
@@ -29,6 +32,7 @@ export interface MouseInput {
   handlePointerMove(event: PointerInfo): void;
   handlePointerUp(event: PointerInfo): void;
   handleWheel(event: WheelInfo): void;
+  handlePointerLeave(): void;
 }
 
 /** A press must move more than this before it counts as a drag (research R6). */
@@ -50,11 +54,34 @@ function wheelNotches({ deltaY, deltaMode }: WheelInfo): number {
 }
 
 /**
- * Translates pointer and wheel events into camera actions. `element` is the canvas host; wheel
- * anchors are made relative to it.
+ * Translates pointer and wheel events into camera and hover actions. `element` is the canvas host;
+ * wheel anchors and hover points are made relative to it.
  */
-export function createMouseInput(actions: MouseCameraActions, element?: Element): MouseInput {
+export function createMouseInput(actions: MouseActions, element?: Element): MouseInput {
   let press: { start: Point; last: Point; dragging: boolean } | null = null;
+  let hovering = false;
+
+  const relative = (clientX: number, clientY: number): Point => {
+    const origin = element?.getBoundingClientRect() ?? { left: 0, top: 0 };
+    return { x: clientX - origin.left, y: clientY - origin.top };
+  };
+
+  /** Over the scene: inside the host (when known) and not over a UI control on top of it. */
+  const overScene = (target: EventTarget | null): boolean =>
+    !startsOnUiControl(target) &&
+    (!element || (target instanceof Node && element.contains(target)));
+
+  const leave = () => {
+    if (!hovering) return;
+    hovering = false;
+    actions.pointerLeave();
+  };
+
+  const hover = (event: PointerInfo) => {
+    if (!overScene(event.target)) return leave();
+    hovering = true;
+    actions.pointerMove(relative(event.clientX, event.clientY));
+  };
 
   return {
     handlePointerDown(event) {
@@ -63,11 +90,11 @@ export function createMouseInput(actions: MouseCameraActions, element?: Element)
       press = { start: at, last: at, dragging: false };
     },
     handlePointerMove(event) {
-      if (!press) return;
+      if (!press) return hover(event);
       const at = { x: event.clientX, y: event.clientY };
       if (!press.dragging) {
         const moved = Math.hypot(at.x - press.start.x, at.y - press.start.y);
-        if (moved <= DRAG_THRESHOLD_PX) return;
+        if (moved <= DRAG_THRESHOLD_PX) return hover(event);
         press.dragging = true;
       }
       actions.panBy({ x: at.x - press.last.x, y: at.y - press.last.y });
@@ -79,28 +106,27 @@ export function createMouseInput(actions: MouseCameraActions, element?: Element)
     handleWheel(event) {
       if (event.deltaY === 0 || startsOnUiControl(event.target)) return;
       event.preventDefault();
-      const origin = element?.getBoundingClientRect() ?? { left: 0, top: 0 };
-      actions.zoomAt(
-        { x: event.clientX - origin.left, y: event.clientY - origin.top },
-        ZOOM_STEP ** -wheelNotches(event),
-      );
+      actions.zoomAt(relative(event.clientX, event.clientY), ZOOM_STEP ** -wheelNotches(event));
     },
+    handlePointerLeave: leave,
   };
 }
 
 /**
- * Wires `input` to the canvas host: presses and wheel on the element, the rest of the drag on the
- * window so it continues outside the canvas. Returns a detach function.
+ * Wires `input` to the canvas host: presses, wheel and leave on the element, moves (hover and the
+ * rest of the drag) on the window so a drag continues outside the canvas. Returns a detach function.
  */
 export function attachMouse(element: HTMLElement, input: MouseInput): () => void {
   const onDown = (e: Event) => input.handlePointerDown(e as PointerEvent);
   const onMove = (e: Event) => input.handlePointerMove(e as PointerEvent);
   const onUp = (e: Event) => input.handlePointerUp(e as PointerEvent);
   const onWheel = (e: Event) => input.handleWheel(e as WheelEvent);
+  const onLeave = () => input.handlePointerLeave();
   const win = element.ownerDocument.defaultView ?? window;
 
   element.addEventListener('pointerdown', onDown);
   element.addEventListener('wheel', onWheel, { passive: false });
+  element.addEventListener('pointerleave', onLeave);
   win.addEventListener('pointermove', onMove);
   win.addEventListener('pointerup', onUp);
   win.addEventListener('pointercancel', onUp);
@@ -108,6 +134,7 @@ export function attachMouse(element: HTMLElement, input: MouseInput): () => void
   return () => {
     element.removeEventListener('pointerdown', onDown);
     element.removeEventListener('wheel', onWheel);
+    element.removeEventListener('pointerleave', onLeave);
     win.removeEventListener('pointermove', onMove);
     win.removeEventListener('pointerup', onUp);
     win.removeEventListener('pointercancel', onUp);

@@ -78,10 +78,10 @@ export function installTestHook(
     get camera() {
       return store.getState().camera;
     },
-    // Hover (US3) and debug (US4) are wired into the store in later phases.
     get hover(): HoverTarget {
-      return null;
+      return store.getState().hover;
     },
+    // Debug (US4) is wired into the store in a later phase.
     get debug() {
       return IDLE_DEBUG;
     },

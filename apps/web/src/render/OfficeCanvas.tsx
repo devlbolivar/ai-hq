@@ -36,7 +36,7 @@ function buildScene(store: OfficeStore): Scene {
   return { root, order };
 }
 
-/** Mouse and keyboard drive the camera through the store; returns a detach function. */
+/** Mouse and keyboard drive the camera and hover through the store; returns a detach function. */
 function attachInput(app: Application, host: HTMLElement, store: OfficeStore): () => void {
   const camera = {
     panBy: (delta: Point) => store.getState().panBy(delta),
@@ -44,7 +44,11 @@ function attachInput(app: Application, host: HTMLElement, store: OfficeStore): (
     recenter: () => store.getState().recenter(),
     getViewport: () => store.getState().viewport,
   };
-  const detachMouse = attachMouse(host, createMouseInput(camera, host));
+  const pointer = {
+    pointerMove: (screenPoint: Point) => store.getState().pointerMove(screenPoint),
+    pointerLeave: () => store.getState().pointerLeave(),
+  };
+  const detachMouse = attachMouse(host, createMouseInput({ ...camera, ...pointer }, host));
   const keyboard = createKeyboardInput(camera);
   const detachKeyboard = attachKeyboard(window, keyboard);
   const tick = (ticker: Ticker) => keyboard.tick(ticker.deltaMS);
