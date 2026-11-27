@@ -23,3 +23,11 @@ export * from './agents/catalog';
 export * from './agents/prompt';
 export * from './agents/validate';
 export { marketingTeam } from './agents/seed';
+export {
+  CHARACTER_BODY,
+  characterSilhouette,
+  positionToWorld,
+  sceneHitTest,
+} from './scene/characterHit';
+export { sceneOrder } from './scene/sceneOrder';
+export type { CharacterPlacement, SceneHoverTarget, SceneItem } from './scene/sceneOrder';
