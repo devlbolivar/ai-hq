@@ -52,6 +52,12 @@ const AGENT_FUNCTIONS = [
   'pick',
   'selectByNumber',
   'cycleSelection',
+  'agentColorHex',
+  'cleanSystemPrompt',
+  'effectivePrompt',
+  'validateTeam',
+  'validateAgentDraft',
+  'applyDraft',
 ] as const;
 
 describe('@ai-hq/domain agent exports (002 contracts/domain-api.md)', () => {
@@ -59,7 +65,22 @@ describe('@ai-hq/domain agent exports (002 contracts/domain-api.md)', () => {
     expect(typeof (domain as Record<string, unknown>)[name]).toBe('function');
   });
 
-  it('exports AGENT_STATUSES', () => {
-    expect(domain).toHaveProperty('AGENT_STATUSES');
+  it.each([
+    'AGENT_STATUSES',
+    'AGENT_COLORS',
+    'SKIN_TONES',
+    'HAIR_STYLES',
+    'HAIR_COLORS',
+    'ACCESSORIES',
+    'ZERO_INVENTION_RULE',
+    'NAME_MAX',
+    'ROLE_MAX',
+    'SYSTEM_PROMPT_MAX',
+  ])('exports %s', (name) => {
+    expect(domain).toHaveProperty(name);
+  });
+
+  it('exports marketingTeam', () => {
+    expect(domain.marketingTeam).toHaveLength(6);
   });
 });
