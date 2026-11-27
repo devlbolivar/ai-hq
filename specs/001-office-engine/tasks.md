@@ -113,8 +113,8 @@ objetos del layout en el orden de `drawOrder()` del dominio, cámara a 1x centra
 - [ ] T043 [US2] GREEN: add camera actions to `apps/web/src/state/store.ts`
 - [ ] T044 [P] [US2] RED: mouse input tests in `apps/web/test/input/mouse.test.ts` — primary button only; < 4 px is not a drag; gestures starting on `[data-ui-control]` are ignored; wheel calls `zoomAt` at the cursor with one `ZOOM_STEP` per notch
 - [ ] T045 [US2] GREEN: implement `apps/web/src/input/mouse.ts`
-- [ ] T046 [P] [US2] RED: keyboard tests in `apps/web/test/input/keyboard.test.ts` — key map per contracts/ui-contract.md (arrows/WASD, `+`/`=`, `-`, `0`); held keys pan at 600 px/s via `tick(dt)`; ignored when focus is in `input`/`textarea`/`select`/`[contenteditable]`
-- [ ] T047 [US2] GREEN: implement `apps/web/src/input/keyboard.ts`
+- [x] T046 [P] [US2] RED: keyboard tests in `apps/web/test/input/keyboard.test.ts` — key map per contracts/ui-contract.md (arrows/WASD, `+`/`=`, `-`, `0`); held keys pan at 600 px/s via `tick(dt)`; ignored when focus is in `input`/`textarea`/`select`/`[contenteditable]`
+- [x] T047 [US2] GREEN: implement `apps/web/src/input/keyboard.ts`
 - [ ] T048 [P] [US2] RED: `apps/web/test/ui/RecenterButton.test.tsx` — role `button` named "Recentrar", click calls `recenter`, carries `data-ui-control`
 - [ ] T049 [US2] GREEN: implement `apps/web/src/ui/RecenterButton.tsx`
 - [ ] T050 [US2] Wire mouse and keyboard input into `apps/web/src/render/OfficeCanvas.tsx` and `RecenterButton` into `apps/web/src/App.tsx`; make T038 and T039 pass
