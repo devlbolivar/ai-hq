@@ -46,6 +46,7 @@ export interface MouseInput {
   handlePointerDown(event: PointerInfo): void;
   handlePointerMove(event: PointerInfo): void;
   handlePointerUp(event: PointerInfo): void;
+  handlePointerCancel(): void;
   handleWheel(event: WheelInfo): void;
   handlePointerLeave(): void;
 }
@@ -125,6 +126,9 @@ export function createMouseInput(actions: MouseActions, element?: Element): Mous
       const tile = screenToGrid(actions.getCamera(), at, actions.getLayout());
       if (tile) actions.selectTile(tile);
     },
+    handlePointerCancel() {
+      press = null;
+    },
     handleWheel(event) {
       if (event.deltaY === 0 || startsOnUiControl(event.target)) return;
       event.preventDefault();
@@ -151,7 +155,7 @@ export function attachMouse(element: HTMLElement, input: MouseInput): () => void
   element.addEventListener('pointerleave', onLeave);
   win.addEventListener('pointermove', onMove);
   win.addEventListener('pointerup', onUp);
-  win.addEventListener('pointercancel', onUp);
+  win.addEventListener('pointercancel', input.handlePointerCancel);
 
   return () => {
     element.removeEventListener('pointerdown', onDown);
@@ -159,6 +163,6 @@ export function attachMouse(element: HTMLElement, input: MouseInput): () => void
     element.removeEventListener('pointerleave', onLeave);
     win.removeEventListener('pointermove', onMove);
     win.removeEventListener('pointerup', onUp);
-    win.removeEventListener('pointercancel', onUp);
+    win.removeEventListener('pointercancel', input.handlePointerCancel);
   };
 }
