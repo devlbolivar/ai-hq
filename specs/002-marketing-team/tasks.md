@@ -64,8 +64,8 @@ pueden empezar en paralelo a esta fase.
 - [ ] T010 GREEN: implement `validateTeam`, `validateAgentDraft`, `applyDraft` and the length constants in `packages/domain/src/agents/validate.ts` until T008–T009 pass
 - [ ] T011 [P] RED: seed tests in `packages/domain/test/agents/seed.test.ts` — exactly 6 profiles in FR-001 order with the ids, English names, Spanish roles and `desk-1`…`desk-6` of contracts/domain-api.md; distinct colors and distinct appearance combinations (FR-003); each Spanish `systemPrompt` describes its role's tasks per FR-004 (keyword checks per role) and does not contain the rule; `validateTeam(marketingTeam, marketingLayout).ok`; `effectivePrompt` of each of the 6 contains the rule exactly once (FR-005)
 - [ ] T012 GREEN: write `marketingTeam` in `packages/domain/src/agents/seed.ts`
-- [ ] T013 [P] (Codex) RED: state machine tests in `packages/domain/test/agents/stateMachine.test.ts` — table of the 36 (from, to) pairs per research R2: valid pairs accepted with their condition met, conditioned pairs rejected with the condition unmet (`UNREACHABLE`, `NOT_ON_FREE_USE_POINT`, `NOT_ARRIVED`), unlisted pairs rejected with `INVALID_TRANSITION` for every trigger that targets them; pair type is checked before the condition (FR-008, FR-010, SC-003)
-- [ ] T014 (Codex) GREEN: implement `AGENT_STATUSES`, `isActivityStatus`, `transition` in `packages/domain/src/agents/stateMachine.ts`
+- [x] T013 [P] (Codex) RED: state machine tests in `packages/domain/test/agents/stateMachine.test.ts` — table of the 36 (from, to) pairs per research R2: valid pairs accepted with their condition met, conditioned pairs rejected with the condition unmet (`UNREACHABLE`, `NOT_ON_FREE_USE_POINT`, `NOT_ARRIVED`), unlisted pairs rejected with `INVALID_TRANSITION` for every trigger that targets them; pair type is checked before the condition (FR-008, FR-010, SC-003)
+- [x] T014 (Codex) GREEN: implement `AGENT_STATUSES`, `isActivityStatus`, `transition` in `packages/domain/src/agents/stateMachine.ts`
 - [ ] T015 Export catalog, prompt, validation and seed from `packages/domain/src/index.ts` and extend `packages/domain/test/exports.test.ts` with their names from contracts/domain-api.md
 - [ ] T016 Integrate the Codex bundle `/tmp/codex-domain.bundle` (T013–T014, T023–T024, T049–T050): fetch, review the diff against contracts/domain-api.md, run `pnpm test`, `git merge --no-ff` marking those tasks, remove worktree, branch and ref; then export `transition`, the PRNG and selection from `index.ts` (+ `exports.test.ts`)
 
@@ -80,8 +80,8 @@ pueden empezar en paralelo a esta fase.
 
 ### Núcleo de simulación — PRNG (Codex), puntos de uso, movimiento y simulación (Claude)
 
-- [ ] T023 [P] (Codex) RED: PRNG tests in `packages/domain/test/agents/rng.test.ts` — same seed → same sequence; `nextFloat` in [0, 1); `randomInt` inclusive bounds and uniform-ish over 10 000 draws; `pick` always consumes one value (also with one item); state is a `uint32` (data-model.md `Simulation.rng`, research R7)
-- [ ] T024 (Codex) GREEN: implement `seedRng`, `nextFloat`, `randomInt`, `pick` in `packages/domain/src/agents/rng.ts`
+- [x] T023 [P] (Codex) RED: PRNG tests in `packages/domain/test/agents/rng.test.ts` — same seed → same sequence; `nextFloat` in [0, 1); `randomInt` inclusive bounds and uniform-ish over 10 000 draws; `pick` always consumes one value (also with one item); state is a `uint32` (data-model.md `Simulation.rng`, research R7)
+- [x] T024 (Codex) GREEN: implement `seedRng`, `nextFloat`, `randomInt`, `pick` in `packages/domain/src/agents/rng.ts`
 - [ ] T025 [P] RED: use point tests in `packages/domain/test/agents/usePoints.test.ts` — `usePointsFor` per activity and order (work → only the agent's own desk point; break → coffee then sofa; meeting 6; review/whiteboard 1; wander none); `usePointKey`; `resolveUsePoint`; `isReservedByOther` compares resolved tiles (data-model.md `UsePointRef`, `AgentRuntime.reservation`, FR-009, FR-014)
 - [ ] T026 GREEN: implement `packages/domain/src/agents/usePoints.ts`
 - [ ] T027 [P] RED: movement tests in `packages/domain/test/agents/movement.test.ts` — `planRoute` = `findPath(...).path.slice(1)` or `null` on any failure; `advanceMovement` at 2 tiles/s: after 250 ms the position is halfway, after 500 ms `tile = next`; position always on the `tile→next` segment; turns only at tile boundaries; `facing` follows the current step; `arrived` on the last tile (FR-011, FR-012, FR-013, data-model.md `AgentRuntime.tile`, `AgentRuntime.next`, `AgentRuntime.stepMs`, `AgentRuntime.route`, `AgentRuntime.facing`)
@@ -136,8 +136,8 @@ cámara que centra y sigue.
 **Independent Test**: cada método de selección deja el agente con anillo, tarjeta destacada y centrado;
 `Esc` quita la selección; arrastrar deja de seguir sin deseleccionar.
 
-- [ ] T049 [P] [US2] (Codex) RED: selection tests in `packages/domain/test/agents/selection.test.ts` — `selectByNumber` 1–6 selects, 7–9 keep `current`; `cycleSelection` wraps both ways, from `null` Tab → first and Shift+Tab → last, empty team → `null` (FR-026, US2-3, US2-4)
-- [ ] T050 [US2] (Codex) GREEN: implement `packages/domain/src/agents/selection.ts` and export it
+- [x] T049 [P] [US2] (Codex) RED: selection tests in `packages/domain/test/agents/selection.test.ts` — `selectByNumber` 1–6 selects, 7–9 keep `current`; `cycleSelection` wraps both ways, from `null` Tab → first and Shift+Tab → last, empty team → `null` (FR-026, US2-3, US2-4)
+- [x] T050 [US2] (Codex) GREEN: implement `packages/domain/src/agents/selection.ts` and export it
 - [ ] T051 [P] [US2] RED: `centerOn` tests in `packages/domain/test/camera/follow.test.ts` — keeps zoom; the world point lands on the viewport center when the limits allow; otherwise the closest camera allowed by the 001 limits (FR-028)
 - [ ] T052 [US2] GREEN: implement `centerOn` in `packages/domain/src/camera/follow.ts` and export it
 - [ ] T053 [P] [US2] RED→GREEN: `apps/web/test/state/follow.test.ts` then `apps/web/src/state/follow.ts` — `followOffset(start, target, elapsedMs)` eases out and reaches `target` at 400 ms (≤ 500 ms, FR-028)
