@@ -37,7 +37,7 @@ Sin persistencia: los datos editados viven en memoria hasta recargar (FR-032a).
 | `color` | `AgentColorId` | del catálogo; único entre agentes (siempre) |
 | `appearance` | `Appearance` | combinaciones distintas en la semilla; puede repetirse tras editar |
 | `deskId` | `string` | id de un objeto `desk` del layout; único; no editable |
-| `systemPrompt` | `string` | 1–4000 caracteres tras `trim`; en español; sin la regla de cero invenciones |
+| `systemPrompt` | `string` | 1–4000 caracteres tras `cleanSystemPrompt` (quita la regla global y recorta); en español; se guarda limpio |
 
 `marketingTeam: readonly AgentProfile[]` — los 6 agentes semilla en el orden de FR-001, con
 `deskId` `desk-1` … `desk-6` en ese orden. El índice en esta lista es el **número** del agente (1–6)
@@ -50,8 +50,10 @@ usado por tarjetas, atajos y desempates de profundidad.
 
 - `ZERO_INVENTION_RULE: string` — bloque global fijo (constitución V): no inventar métricas,
   estadísticas, testimonios, citas, tendencias ni datos de terceros; pedir el dato que falte.
-- `effectivePrompt(profile) = ZERO_INVENTION_RULE + "\n\n" + systemPrompt` sin apariciones literales de
-  la regla en la parte editable (research R4). Contiene la regla exactamente una vez.
+- `cleanSystemPrompt(text)`: quita las apariciones literales de la regla y recorta; la comparten
+  validación, guardado y composición.
+- `effectivePrompt(profile) = ZERO_INVENTION_RULE + "\n\n" + cleanSystemPrompt(systemPrompt)`
+  (research R4). Contiene la regla exactamente una vez.
 
 ## Validación de agentes (`agents/validate.ts`)
 
@@ -71,10 +73,10 @@ errores se reportan juntos.
 | `EMPTY_FIELD` | `id` / `name` / `role` / `systemPrompt` | vacío o solo espacios |
 | `TOO_LONG` | `name` / `role` / `systemPrompt` | supera 30 / 40 / 4000 caracteres tras `trim` |
 
-`validateAgentDraft(draft, team, agentId)` → `AgentDraftErrors` = `Partial<Record<'name' | 'role' |
-'color' | 'systemPrompt', string>>` (vacío = válido), con las mismas reglas que la carga comparando
-con el resto del equipo (FR-030). `applyDraft(profile, draft)` devuelve el perfil con los textos
-recortados.
+`validateAgentDraft(draft, team, agentId)` → `AgentDraftErrors` = `Partial<Record<DraftField,
+string>>` con `DraftField` = `name`, `role`, `color`, `systemPrompt` y `appearance.<campo>` (vacío =
+válido), con las mismas reglas que la carga comparando con el resto del equipo (FR-030).
+`applyDraft(profile, draft)` devuelve el perfil con `name`/`role` recortados y el prompt limpio.
 
 ## Estado del agente y transiciones (`agents/stateMachine.ts`)
 
@@ -113,7 +115,8 @@ recortados.
 ### UsePointRef
 
 `{ objectId: string; index: number }` — punto `index` de `usePoints` del objeto. Clave textual
-`usePointKey(ref) = "objectId#index"`.
+`usePointKey(ref) = "objectId#index"`. La exclusión se comprueba por tile resuelto y `createSimWorld`
+rechaza dos puntos de uso en el mismo tile.
 
 ### Activity y destino
 
@@ -128,8 +131,10 @@ recortados.
 | `whiteboard` | `whiteboard` (1) | `idle` mirándola | solo autonomía |
 | `wander` | ninguno: tile caminable libre que no es punto de uso | `idle` | solo autonomía |
 
-`AgentTarget = { activity: Activity; tile: Coord; usePoint: UsePointRef | null; facing: Direction |
-null }`.
+`AgentTarget = { activity: Activity | null; tile: Coord; usePoint: UsePointRef | null; facing:
+Direction | null }` — `activity: null` es un destino sin actividad (orden `go-to`, solo hook de
+pruebas). `GridPosition = { x; y }` son coordenadas de tile fraccionales (no píxeles);
+`positionToWorld` las convierte al centro del tile en px.
 
 ### AgentRuntime (estado de simulación de un agente)
 
@@ -142,14 +147,15 @@ null }`.
 | `stepMs` | `number` | 0 ≤ `stepMs` < `STEP_DURATION_MS`; avance entero dentro del paso |
 | `route` | `readonly Coord[]` | tiles que faltan después de `next` |
 | `facing` | `Direction` | dirección del paso actual o la del punto de uso al llegar (FR-013) |
-| `target` | `AgentTarget \| null` | destino y actividad en curso o hacia la que camina |
+| `target` | `AgentTarget \| null` | destino y actividad en curso o hacia la que camina; `null` al detenerse por una orden `idle` |
 | `reservation` | `UsePointRef \| null` | punto ocupado o reservado (FR-014) |
 | `forced` | `boolean` | tiene una orden externa activa (sin autonomía, FR-017a) |
-| `timerMs` | `number \| null` | tiempo restante de la pausa de reposo (`idle`) o de la actividad autónoma |
+| `timerMs` | `number \| null` | tiempo restante de la pausa de reposo (`idle`) o de la actividad autónoma; `null` con `forced`; empieza a descontar en el paso siguiente al que se crea |
 | `celebrateMs` | `number` | > 0 mientras celebra (sigue en `working`) |
 
-Posición mostrada: `agentPosition(agent)` = `lerp(tile, next, stepMs / STEP_DURATION_MS)` en
-coordenadas de cuadrícula fraccionales (siempre sobre el segmento, FR-012).
+Posición mostrada: `agentPosition(agent): GridPosition` = `lerp(tile, next, stepMs /
+STEP_DURATION_MS)` (siempre sobre el segmento, FR-012). Un agente quieto nunca ocupa un punto de uso
+ajeno: al detenerse avanza hasta el primer tile de su ruta que no sea punto de uso (salvo el suyo).
 
 ### Simulation y SimWorld
 
@@ -167,7 +173,9 @@ reserva su titular; `tile` y `next` son siempre caminables; dos `wander` nunca c
 tile: Coord } | { type: 'idle' }`
 
 `OrderResult = { ok: true; changed: boolean } | { ok: false; reason: 'NO_FREE_SPOT' | 'UNREACHABLE' |
-'UNKNOWN_AGENT' }` — `changed: false` cuando el agente ya está en esa actividad o camina hacia ella.
+'INVALID_DESTINATION' | 'UNKNOWN_AGENT' }` — `changed: false` cuando el agente ya tiene una orden
+forzada de esa actividad (en ella o caminando hacia ella); si la misma actividad venía de la
+autonomía, la orden la adopta (`changed: true`).
 
 ## Selección (`agents/selection.ts`)
 
@@ -178,7 +186,7 @@ Funciones puras sobre `teamIds` y el id seleccionado: `selectByNumber`, `cycleSe
 
 | Tipo | Definición |
 |---|---|
-| `CharacterPlacement` | `{ id: string; teamIndex: number; position: Point (grid fraccional); tile: Coord; next: Coord \| null }` |
+| `CharacterPlacement` | `{ id: string; teamIndex: number; position: GridPosition; tile: Coord; next: Coord \| null }` |
 | `SceneItem` | `{ type: 'object'; id } \| { type: 'agent'; id }` |
 | `SceneHoverTarget` | `HoverTarget \| { type: 'agent'; id: string }` |
 | `CHARACTER_BODY` | `{ width: 24; height: 52 }` px a zoom 1, anclado al centro del tile (research R10) |
@@ -201,6 +209,8 @@ Se añade a `OfficeState` de la 001:
 | `notice` | `{ message: string; id: number } \| null` | aviso efímero ("Sin sitio libre") |
 | `hover` | `SceneHoverTarget` | amplía el hover de la 001 con personajes |
 
-Transiciones relevantes: `toggleDebug` al desactivar → `cancelForcedOrders`; `panBy`/`zoomAt`/
+Transiciones relevantes: `toggleDebug` al desactivar → `cancelForcedOrders` y vacía `queuedOrders`
+(son órdenes de depuración); al reanudar, `queuedOrders` se aplican en orden de llegada antes del
+primer paso; `panBy`/`zoomAt`/
 `recenter` → `selection.following = false`; `select(id)` → `following = true` e inicia `follow`;
 `saveAgent(id, draft)` → valida, aplica, recrea `world` (el `sim` se conserva: los ids no cambian).

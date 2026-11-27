@@ -65,11 +65,15 @@ const NAME_MAX = 30, ROLE_MAX = 40, SYSTEM_PROMPT_MAX = 4000
 
 ```ts
 const ZERO_INVENTION_RULE: string
+function cleanSystemPrompt(text: string): string
 function effectivePrompt(profile: Pick<AgentProfile, 'systemPrompt'>): string
 ```
 
-- `effectivePrompt(p) === ZERO_INVENTION_RULE + '\n\n' + stripped`, donde `stripped` es
-  `p.systemPrompt` sin apariciones literales de `ZERO_INVENTION_RULE`, recortado.
+- `cleanSystemPrompt` quita toda aparición literal de `ZERO_INVENTION_RULE` y recorta. La usan
+  `validateAgentDraft` (la longitud y el vacío se miden sobre el texto limpio), `applyDraft` (se guarda
+  limpio) y `effectivePrompt`.
+
+- `effectivePrompt(p) === ZERO_INVENTION_RULE + '\n\n' + cleanSystemPrompt(p.systemPrompt)`.
 - Para todo `p`, la regla aparece exactamente una vez en `effectivePrompt(p)` (FR-005).
 - `ZERO_INVENTION_RULE` menciona métricas, estadísticas, testimonios, citas, tendencias y datos de
   terceros, y pide solicitar el dato que falte (constitución V).
@@ -84,7 +88,8 @@ type TeamValidationResult = { ok: true } | { ok: false; errors: readonly AgentEr
 
 function validateTeam(profiles: readonly AgentProfile[], layout: OfficeLayout): TeamValidationResult
 
-type DraftField = 'name' | 'role' | 'color' | 'systemPrompt'
+type DraftField = 'name' | 'role' | 'color' | 'systemPrompt' | 'appearance.skinTone'
+  | 'appearance.hairStyle' | 'appearance.hairColor' | 'appearance.accessory'
 type AgentDraftErrors = Partial<Record<DraftField, string>>
 function validateAgentDraft(draft: AgentDraft, team: readonly AgentProfile[], agentId: string):
   AgentDraftErrors
@@ -95,10 +100,12 @@ function applyDraft(profile: AgentProfile, draft: AgentDraft): AgentProfile
   campo (`appearance.hairStyle` para apariencia). `message` en español con nombre o id del agente y
   campo. Una apariencia fuera del catálogo no lanza excepción.
 - `validateAgentDraft`: `{}` si es válido. Compara nombre y color con los demás agentes de `team`
-  (excluye `agentId`). Un color fuera del catálogo también es error de `color`. Mensajes en español,
+  (excluye `agentId`). Un color o una apariencia fuera del catálogo dan error en su campo (misma
+  comprobación de catálogo que `validateTeam`). Mensajes en español,
   p. ej. "El nombre es obligatorio", "Máximo 30 caracteres", "Ya hay un agente con ese nombre", "Ese
   color ya lo usa Copywriter".
-- `applyDraft` conserva `id` y `deskId` y recorta `name`, `role` y `systemPrompt`.
+- `applyDraft` conserva `id` y `deskId`, recorta `name` y `role` y guarda
+  `cleanSystemPrompt(systemPrompt)`.
 
 ### Máquina de estados (`agents/stateMachine.ts`)
 
@@ -133,6 +140,9 @@ function transition(from: AgentStatus, trigger: TransitionTrigger): TransitionRe
 
 - Todo lo demás → `INVALID_TRANSITION` (p. ej. `start-activity` desde `walking` o desde una actividad,
   `arrive` fuera de `walking`, `cancel`/`finish` desde `idle`, `finish` desde `walking`).
+- `walk-to.reachable` significa "hay ruta válida y el agente se moverá al menos un paso": desde
+  `idle` o una actividad, `planRoute` no es `null` ni vacía; desde `walking`, hay ruta desde `next`.
+  Un destino igual al tile actual (agente quieto) no es alcanzable a efectos de la transición.
 - Disparador aceptado con la condición en `false` → su motivo (`UNREACHABLE`, `NOT_ON_FREE_USE_POINT`,
   `NOT_ARRIVED`). El tipo de par se comprueba antes que la condición.
 - Tests: los 36 pares (origen, destino) según research R2 (SC-003).
@@ -165,6 +175,9 @@ function freeUsePointsFor(sim: Simulation, world: SimWorld, agentId: string, act
 function activityStatus(activity: Activity): ActivityStatus | null  // whiteboard/wander → null
 ```
 
+- La exclusión se comprueba por **tile resuelto**: `isReservedByOther` es `true` si otro agente
+  reserva cualquier punto cuyo tile coincida con el de `ref`. Además, `createSimWorld` rechaza un
+  layout con dos puntos de uso en el mismo tile.
 - `usePointsFor`: `work` → solo el punto del escritorio del agente; `meeting` → los de
   `meeting-table`; `break` → cafetera y luego sofá; `review`/`whiteboard` → pizarra; `wander` → `[]`.
   Orden: el de `layout.objects` y luego `index`.
@@ -172,8 +185,9 @@ function activityStatus(activity: Activity): ActivityStatus | null  // whiteboar
 ### Estado de un agente (`agents/types.ts`)
 
 ```ts
-interface AgentTarget { activity: Activity; tile: Coord; usePoint: UsePointRef | null;
-  facing: Direction | null }
+interface AgentTarget { activity: Activity | null;   // null = go-to (orden sin actividad)
+  tile: Coord; usePoint: UsePointRef | null; facing: Direction | null }
+interface GridPosition { x: number; y: number }    // coordenadas de tile fraccionales (no píxeles)
 interface AgentRuntime {
   id: string; status: AgentStatus; tile: Coord; next: Coord | null; stepMs: number;
   route: readonly Coord[]; facing: Direction; target: AgentTarget | null;
@@ -185,14 +199,17 @@ interface AgentRuntime {
 
 ```ts
 const STEP_DURATION_MS = 500
-function agentPosition(agent: AgentRuntime): Point        // grid fraccional, sobre el segmento
+function agentPosition(agent: AgentRuntime): GridPosition // sobre el segmento tile→next
+function positionToWorld(pos: GridPosition, tileSize?: TileSize): Point  // centro del tile en px
 function directionBetween(from: Coord, to: Coord): Direction
 function planRoute(world: SimWorld, from: Coord, to: Coord): readonly Coord[] | null
 function advanceMovement(agent: AgentRuntime, dtMs: number): { agent: AgentRuntime; arrived: boolean }
 ```
 
-- `planRoute` usa `findPath` de la 001; devuelve los tiles **después** de `from` (vacío si
-  `from = to`) o `null` si no hay ruta.
+- `planRoute` usa `findPath` de la 001: en éxito devuelve `path.slice(1)` (vacío si `from = to`); ante
+  cualquier fallo de `findPath` (`blocked`, `unreachable`, `out-of-bounds`) devuelve `null`.
+- `positionToWorld` equivale a `tileCenter` de la 001 con coordenadas fraccionales; la usan dibujo,
+  silueta, hit-test y seguimiento de cámara.
 - `advanceMovement` avanza `dtMs` (múltiplo de `SIM_STEP_MS`) sobre `next`/`route`; al completar un
   paso, `tile = next`, toma el siguiente de `route` y actualiza `facing`; `arrived` es `true` en el
   paso en que alcanza el último tile. Nunca salta tiles ni sale de la ruta.
@@ -209,10 +226,18 @@ function chooseAutonomousTarget(sim: Simulation, world: SimWorld, agentId: strin
   { target: AgentTarget | null; rng: RngState }
 ```
 
-- Elige actividad con el PRNG; si no tiene destino libre y alcanzable, prueba las siguientes en el
-  orden de `AUTONOMOUS_ACTIVITIES` empezando por la elegida (research R8). `null` si ninguna.
+- Elige actividad con `pick(AUTONOMOUS_ACTIVITIES)`; si esa actividad no tiene **ningún candidato
+  libre**, prueba las siguientes en el orden de la lista (circular) empezando por la elegida. `null` si
+  ninguna tiene candidatos.
+- Entre los candidatos libres de la actividad elegida se sortea siempre con `pick` (también si solo hay
+  uno). Si el candidato sorteado no tiene ruta, `target: null` y el llamador conserva estado, posición
+  y reserva y programa otra pausa (no se prueba otra actividad).
+- Convenciones de consumo del PRNG (FR-019): por agente y en orden de equipo; una decisión consume
+  exactamente `pick(actividad)` y `pick(candidato)`; la duración de la actividad se sortea al empezarla
+  (al llegar o al empezar en el sitio); la pausa de reposo, al entrar en `idle` sin orden forzada.
+  Los tiles de paseo se enumeran por filas (`y` y luego `x`).
 - `wander`: tile caminable que no es punto de uso de ningún objeto, distinto de su tile y no ocupado
-  ni elegido como destino por otro agente.
+  (`tile` o `next`) ni elegido como destino (`target.tile`) por otro agente.
 - Nunca devuelve `meeting` ni `review` (FR-018).
 
 ### Órdenes (`agents/orders.ts`)
@@ -224,7 +249,7 @@ type Order =
   | { type: 'idle' }
 type OrderResult =
   | { ok: true; changed: boolean }
-  | { ok: false; reason: 'NO_FREE_SPOT' | 'UNREACHABLE' | 'UNKNOWN_AGENT' }
+  | { ok: false; reason: 'NO_FREE_SPOT' | 'UNREACHABLE' | 'INVALID_DESTINATION' | 'UNKNOWN_AGENT' }
 function applyOrder(sim: Simulation, world: SimWorld, agentId: string, order: Order):
   { sim: Simulation; result: OrderResult }
 function cancelForcedOrders(sim: Simulation): Simulation
@@ -236,11 +261,22 @@ function cancelForcedOrders(sim: Simulation): Simulation
   `usePointsFor`. `work` → siempre su escritorio.
 - Si ya está en el punto elegido: `idle → actividad` directamente (`start-activity`).
 - `NO_FREE_SPOT` / `UNREACHABLE` → `sim` sin cambios (mismo objeto).
-- Misma actividad que su `target` actual (en ella o caminando hacia ella) → `{ ok: true, changed:
-  false }` y `sim` sin cambios.
-- `idle`: si camina, termina el paso en curso y queda en `idle` liberando la reserva; si está en una
-  actividad, `idle` en su sitio conservando la reserva. Quita `forced` y programa la pausa de reposo.
-- `go-to`: como una orden sin actividad hacia un tile caminable (termina en `idle`, `forced`).
+- Repetición: si el agente ya tiene `forced` y su `target` es la misma actividad (en ella o caminando
+  hacia ella) → `{ ok: true, changed: false }` y `sim` sin cambios. Si la misma actividad venía de la
+  autonomía, la orden la **adopta**: conserva ruta, posición y reserva, marca `forced`, anula
+  `timerMs` y `celebrateMs` → `{ ok: true, changed: true }`.
+- Un agente `forced` en una actividad tiene `timerMs = null`: no termina por tiempo ni celebra.
+- **Detenerse** (orden `idle` o `cancelForcedOrders` sobre un agente que camina): termina el paso en
+  curso y se detiene en el primer tile, desde `next` y siguiendo su ruta, que no sea punto de uso de
+  ningún objeto o que sea el punto que él mismo reserva. Si se detiene sobre su punto reservado lo
+  conserva; si no, lo libera. Mientras tanto sigue en `walking` con `target = null` y pasa a `idle`
+  al llegar (`arrive` con `activity: null`). Así un agente quieto nunca ocupa un punto ajeno.
+- `idle` sobre un agente en una actividad: `idle` en su sitio conservando la reserva. En ambos casos
+  quita `forced` y programa la pausa de reposo al quedar `idle`.
+- `go-to`: orden sin actividad (`target.activity = null`) hacia un tile caminable que no sea punto de
+  uso ni esté ocupado o elegido como destino por otro agente; si no → `INVALID_DESTINATION`. Termina
+  en `idle` con `forced`.
+- Varias órdenes antes de completar el mismo paso: gana la última; todas se calculan desde `next`.
 - `cancelForcedOrders`: para cada agente con `forced`, el mismo efecto que `{ type: 'idle' }`.
 
 ### Simulación (`agents/simulation.ts`)
@@ -262,12 +298,17 @@ function agentById(sim: Simulation, id: string): AgentRuntime | undefined
 - `createSimWorld` lanza `Error` con todos los mensajes si `validateLayout` o `validateTeam` fallan.
 - `createSimulation`: todos en `idle` sobre el punto de su escritorio, mirando según el punto, con su
   reserva y una pausa de reposo sorteada (FR-007).
-- `stepSimulation` procesa los agentes en orden de equipo: movimiento, llegadas (`arrive`), fin de
-  actividad (`finish`, con celebración si es `working` autónomo), fin de celebración, vencimiento de
-  la pausa (decisión autónoma). Los agentes `forced` no deciden ni terminan por tiempo.
-- `advanceFrame` limita `frameDtMs` a `MAX_FRAME_MS`, ejecuta `floor((acc + dt) / SIM_STEP_MS)` pasos
-  y devuelve el resto. Dos secuencias de cuadros que suman el mismo tiempo dan el mismo `Simulation`
-  (SC-006).
+- `stepSimulation` procesa los agentes en orden de equipo: movimiento, llegadas (`arrive`),
+  temporizadores y vencimiento de la pausa (decisión autónoma). Los agentes `forced` no deciden ni
+  terminan por tiempo.
+- Temporizadores: un temporizador creado en un paso empieza a descontar en el paso siguiente. Al
+  vencer el de `working` autónomo empieza la celebración (`celebrateMs = CELEBRATE_MS`, sigue en
+  `working`); al agotarse `celebrateMs` → `finish` → `idle`. Al vencer el de `break` → `finish` →
+  `idle` (sin celebrar).
+- `advanceFrame` recorta `frameDtMs` a `MAX_FRAME_MS`, ejecuta `floor((acc + recortado) /
+  SIM_STEP_MS)` pasos y devuelve el resto. Garantía (SC-006): con el mismo acumulador inicial, dos
+  secuencias de cuadros cuyos tiempos **ya recortados** suman lo mismo dan el mismo `Simulation`
+  (p. ej. `[500]` avanza 250 ms y `[250, 250]` avanza 500 ms).
 - Con `ACCEPTANCE_SEED`, cada agente completa al menos un ciclo autónomo en 60 000 ms simulados
   (SC-005).
 
@@ -286,20 +327,22 @@ function cycleSelection(teamIds: readonly string[], current: string | null, dire
 ## Geometría de escena (Claude)
 
 ```ts
-interface CharacterPlacement { id: string; teamIndex: number; position: Point; tile: Coord;
+interface CharacterPlacement { id: string; teamIndex: number; position: GridPosition; tile: Coord;
   next: Coord | null }
 type SceneItem = { type: 'object'; id: string } | { type: 'agent'; id: string }
 type SceneHoverTarget = HoverTarget | { type: 'agent'; id: string }
 const CHARACTER_BODY: { width: number; height: number }
 function sceneOrder(layout: OfficeLayout, characters: readonly CharacterPlacement[]): SceneItem[]
-function characterSilhouette(position: Point, tileSize?: TileSize): Point[]
+function characterSilhouette(position: GridPosition, tileSize?: TileSize): Point[]
 function sceneHitTest(worldPoint: Point, layout: OfficeLayout,
   characters: readonly CharacterPlacement[]): SceneHoverTarget
 function centerOn(camera: Camera, worldPoint: Point, viewport: Viewport, layout: OfficeLayout): Camera
 ```
 
-- `sceneOrder` sin personajes ≡ `drawOrder` de la 001. Clave de research R10; empate entre personajes
-  → gana (va después) el de mayor `teamIndex` (FR-023).
+- `sceneOrder` sin personajes ≡ `drawOrder` de la 001. Clave de research R10; entre personajes con la
+  misma clave de tile decide la profundidad fraccional (`position.x + position.y`) y, si también
+  empata, va después el de mayor `teamIndex` (FR-023). Dos agentes que se cruzan en el mismo segmento
+  invierten su orden al cruzarse.
 - `sceneHitTest` recorre `sceneOrder` al revés: objetos con su silueta de la 001, personajes con
   `characterSilhouette`; luego suelo; luego `null`.
 - `centerOn` conserva el zoom y aplica el límite de cámara de la 001 (FR-028).
