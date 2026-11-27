@@ -135,8 +135,8 @@ objetos del layout en el orden de `drawOrder()` del dominio, cámara a 1x centra
 - [x] T053 [US3] GREEN: implement `silhouette` and `hitTest` in `packages/domain/src/scene/hitTest.ts`; export from `packages/domain/src/index.ts`
 - [x] T054 [US3] RED: store hover tests in `apps/web/test/state/hover.test.ts` — `pointerMove(screenPoint)` sets `hover` via camera + `hitTest`; `pointerLeave` sets `null`
 - [x] T055 [US3] GREEN: add `hover`, `pointerMove`, `pointerLeave` to `apps/web/src/state/store.ts`
-- [ ] T056 [P] [US3] RED: `apps/web/test/ui/HoverLabel.test.tsx` — role `status` shows the object `name` only when hovering an object
-- [ ] T057 [US3] GREEN: implement `apps/web/src/ui/HoverLabel.tsx`
+- [x] T056 [P] [US3] RED: `apps/web/test/ui/HoverLabel.test.tsx` — role `status` shows the object `name` only when hovering an object
+- [x] T057 [US3] GREEN: implement `apps/web/src/ui/HoverLabel.tsx`
 - [ ] T058 [US3] Implement hover highlight (tile diamond or full footprint) in `apps/web/src/render/drawOverlay.ts`, wire pointer move/leave in `apps/web/src/input/mouse.ts` and `OfficeCanvas.tsx`, add `HoverLabel` to `App.tsx`; make T051 pass
 
 **Checkpoint**: US1–US3 funcionan de forma independiente
