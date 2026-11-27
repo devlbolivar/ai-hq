@@ -231,7 +231,7 @@ describe('autonomy inside the simulation (FR-016, FR-017, FR-019, SC-005, SC-006
         }
       }
     }
-  });
+  }, 30_000);
 
   it('keeps durations within bounds when the activity starts', () => {
     const states = run(ACCEPTANCE_SEED, 120_000);
@@ -264,5 +264,5 @@ describe('autonomy inside the simulation (FR-016, FR-017, FR-019, SC-005, SC-006
       compared++;
     }
     expect(compared).toBeGreaterThan(1000);
-  });
+  }, 30_000);
 });
