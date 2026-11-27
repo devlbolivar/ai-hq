@@ -31,3 +31,7 @@ export {
 } from './scene/characterHit';
 export { sceneOrder } from './scene/sceneOrder';
 export type { CharacterPlacement, SceneHoverTarget, SceneItem } from './scene/sceneOrder';
+export * from './agents/usePoints';
+export * from './agents/movement';
+export * from './agents/autonomy';
+export * from './agents/simulation';
