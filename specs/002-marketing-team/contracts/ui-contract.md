@@ -60,7 +60,9 @@ Con el editor abierto no actúa ningún atajo de la oficina (tampoco los de la 0
 
 ## Hook de pruebas `window.__AIHQ__` (añadidos)
 
-Mismas condiciones de exposición que en la 001. La semilla se fija con `?seed=N` en la URL.
+Mismas condiciones de exposición que en la 001. Parámetros de URL: `?seed=N` fija la semilla (en
+cualquier build); `?paused=1` arranca con la simulación en pausa (solo fuera de producción, para que
+los e2e de la 001 no dependan de por dónde caminan los agentes).
 
 ```ts
 interface AIHQTestHook /* …campos de la 001… */ {

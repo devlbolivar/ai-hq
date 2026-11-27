@@ -12,7 +12,7 @@ Bloques y responsables (research R1):
 |---|---|---|
 | Tanda 1 | `agents/types.ts`, `agents/catalog.ts`, `agents/seed.ts`, `agents/prompt.ts`, `agents/validate.ts`, `agents/stateMachine.ts` | Codex |
 | Tanda 2 | `agents/rng.ts`, `agents/usePoints.ts`, `agents/movement.ts`, `agents/autonomy.ts`, `agents/orders.ts`, `agents/simulation.ts`, `agents/selection.ts` | Codex |
-| Geometría | `scene/sceneOrder.ts`, `scene/characterHit.ts`, `camera/follow.ts` | Claude |
+| Geometría | `scene/sceneOrder.ts`, `scene/characterHit.ts` (incluye `positionToWorld`), `camera/follow.ts` | Claude |
 
 ## Tanda 1
 
@@ -200,7 +200,6 @@ interface AgentRuntime {
 ```ts
 const STEP_DURATION_MS = 500
 function agentPosition(agent: AgentRuntime): GridPosition // sobre el segmento tile→next
-function positionToWorld(pos: GridPosition, tileSize?: TileSize): Point  // centro del tile en px
 function directionBetween(from: Coord, to: Coord): Direction
 function planRoute(world: SimWorld, from: Coord, to: Coord): readonly Coord[] | null
 function advanceMovement(agent: AgentRuntime, dtMs: number): { agent: AgentRuntime; arrived: boolean }
@@ -208,8 +207,7 @@ function advanceMovement(agent: AgentRuntime, dtMs: number): { agent: AgentRunti
 
 - `planRoute` usa `findPath` de la 001: en éxito devuelve `path.slice(1)` (vacío si `from = to`); ante
   cualquier fallo de `findPath` (`blocked`, `unreachable`, `out-of-bounds`) devuelve `null`.
-- `positionToWorld` equivale a `tileCenter` de la 001 con coordenadas fraccionales; la usan dibujo,
-  silueta, hit-test y seguimiento de cámara.
+
 - `advanceMovement` avanza `dtMs` (múltiplo de `SIM_STEP_MS`) sobre `next`/`route`; al completar un
   paso, `tile = next`, toma el siguiente de `route` y actualiza `facing`; `arrived` es `true` en el
   paso en que alcanza el último tile. Nunca salta tiles ni sale de la ruta.
@@ -332,6 +330,7 @@ interface CharacterPlacement { id: string; teamIndex: number; position: GridPosi
 type SceneItem = { type: 'object'; id: string } | { type: 'agent'; id: string }
 type SceneHoverTarget = HoverTarget | { type: 'agent'; id: string }
 const CHARACTER_BODY: { width: number; height: number }
+function positionToWorld(pos: GridPosition, tileSize?: TileSize): Point  // centro del tile en px
 function sceneOrder(layout: OfficeLayout, characters: readonly CharacterPlacement[]): SceneItem[]
 function characterSilhouette(position: GridPosition, tileSize?: TileSize): Point[]
 function sceneHitTest(worldPoint: Point, layout: OfficeLayout,
@@ -345,4 +344,6 @@ function centerOn(camera: Camera, worldPoint: Point, viewport: Viewport, layout:
   invierten su orden al cruzarse.
 - `sceneHitTest` recorre `sceneOrder` al revés: objetos con su silueta de la 001, personajes con
   `characterSilhouette`; luego suelo; luego `null`.
+- `positionToWorld` equivale a `tileCenter` de la 001 con coordenadas fraccionales; la usan dibujo,
+  silueta, hit-test y seguimiento de cámara. `GridPosition` se define en `agents/types.ts` (Tanda 1).
 - `centerOn` conserva el zoom y aplica el límite de cámara de la 001 (FR-028).
