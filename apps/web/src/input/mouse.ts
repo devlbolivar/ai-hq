@@ -114,8 +114,10 @@ export function createMouseInput(actions: MouseActions, element?: Element): Mous
       }
       actions.panBy({ x: at.x - press.last.x, y: at.y - press.last.y });
       press.last = at;
+      hover(event);
     },
     handlePointerUp(event) {
+      if (press?.dragging) hover(event);
       const click = press !== null && !press.dragging;
       press = null;
       if (!click || !actions.isDebugEnabled()) return;
