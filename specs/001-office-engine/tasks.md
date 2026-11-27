@@ -67,8 +67,8 @@ todas las historias.
 - [x] T022 [P] RED: validation tests in `packages/domain/test/layout/validate.test.ts` — one invalid fixture per `LayoutError.code` in data-model.md "Validación del layout" (`OUT_OF_BOUNDS`, `DUPLICATE_ID`, `BLOCKING_OVERLAP`, `ENTRANCE_BLOCKED`, `USE_POINT_BLOCKED`, `USE_POINT_UNREACHABLE`, `MISSING_NETWORK`, `DESK_USE_POINT`, `BAD_ATTACHMENT`), each error names the object/tile; several errors are returned together; `validateLayout(marketingLayout)` is `{ ok: true }` (FR-008, FR-009b)
 - [x] T023 GREEN: implement `validateLayout` in `packages/domain/src/layout/validate.ts` (uses `walkability` + `reachableFrom`)
 - [x] T024 Export the foundational API (types, iso, camera core, layout, walkability) from `packages/domain/src/index.ts` per contracts/domain-api.md
-- [ ] T025 [P] RED: store base tests in `apps/web/test/state/store.test.ts` — initial `camera` equals `initialCamera(viewport, marketingLayout)`; `setViewport` updates the viewport and re-centers while the user has not moved the camera; loading an invalid layout throws with the validation messages (data-model.md "Estado de UI")
-- [ ] T026 GREEN: implement the Zustand store base (`camera`, `viewport`, `setViewport`) in `apps/web/src/state/store.ts`
+- [x] T025 [P] RED: store base tests in `apps/web/test/state/store.test.ts` — initial `camera` equals `initialCamera(viewport, marketingLayout)`; `setViewport` updates the viewport and re-centers while the user has not moved the camera; loading an invalid layout throws with the validation messages (data-model.md "Estado de UI")
+- [x] T026 GREEN: implement the Zustand store base (`camera`, `viewport`, `setViewport`) in `apps/web/src/state/store.ts`
 
 **Checkpoint**: Foundation ready — user stories can start
 
