@@ -61,7 +61,7 @@ Referencia automatizada: `apps/web/e2e/perf.spec.ts` (Chromium headless con GPU,
 
 ## Veredicto
 
-- [ ] Todos los escenarios validados en Chrome
-- [ ] Todos los escenarios validados en Safari
-- [ ] SC-003 (≥ 60 fps) confirmado en hardware real
-- [ ] Listo para abrir el PR de la feature
+- [x] Todos los escenarios validados en Chrome
+- [x] Todos los escenarios validados en Safari
+- [x] SC-003 (≥ 60 fps) confirmado en hardware real
+- [x] Listo para abrir el PR de la feature

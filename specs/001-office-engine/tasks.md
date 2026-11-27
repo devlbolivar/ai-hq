@@ -173,7 +173,7 @@ sobre un escritorio → "Sin ruta"; desactivar limpia todo (quickstart 8–9).
 - [x] T072 Refactor pass over `packages/domain/src/` and `apps/web/src/` with all tests green (no behavior change; `refactor:` commits)
 - [x] T073 Run `pnpm test:coverage` and add missing tests until thresholds pass (domain ≥ 95 %, packages ≥ 80 %)
 - [x] T074 Run the full quality gate `pnpm lint && pnpm typecheck && pnpm test && pnpm e2e` at repo root
-- [ ] T075 Manual validation of quickstart.md scenarios 1–10 in Chrome and Safari (incl. 30 s FPS check on real hardware); record results in `specs/001-office-engine/validation.md`
+- [x] T075 Manual validation of quickstart.md scenarios 1–10 in Chrome and Safari (incl. 30 s FPS check on real hardware); record results in `specs/001-office-engine/validation.md`
 
 ---
 
