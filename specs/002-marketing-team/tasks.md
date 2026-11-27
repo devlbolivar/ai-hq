@@ -93,8 +93,9 @@ pueden empezar en paralelo a esta fase.
 
 - [x] T031 [P] RED: seed source tests in `apps/web/test/seed.test.ts` — `?seed=N` parsed as integer; invalid or missing → value from an injected clock; `?paused=1` honored only when the test hook is exposed (contracts/ui-contract.md "Hook de pruebas")
 - [x] T032 GREEN: implement `readSimOptions(location, env, now)` in `apps/web/src/seed.ts`
-- [ ] T033 RED: store tests in `apps/web/test/state/agents.test.ts` — the store holds `team` = `marketingTeam`, `world`, `sim` from the seed; `tick(dtMs)` calls `advanceFrame` and keeps `accumulatorMs`; `tick` does nothing while `paused`; the store starts `paused` when `readSimOptions` says so (`?paused=1`) and uses its seed; creating the store with an invalid team throws with the validation messages (data-model.md "Estado de la web": `team`, `world`, `sim`, `accumulatorMs`, `paused`)
+- [x] T033 RED: store tests in `apps/web/test/state/agents.test.ts` — the store holds `team` = `marketingTeam`, `world`, `sim` from the seed; `tick(dtMs)` calls `advanceFrame` and keeps `accumulatorMs`; `tick` does nothing while `paused`; the store starts `paused` when `readSimOptions` says so (`?paused=1`) and uses its seed; creating the store with an invalid team throws with the validation messages (data-model.md "Estado de la web": `team`, `world`, `sim`, `accumulatorMs`, `paused`)
 - [ ] T034 GREEN: add `team`, `world`, `sim`, `accumulatorMs`, `paused`, `seed` and `tick` to `apps/web/src/state/store.ts`, created from `readSimOptions` (T032); call `store.getState().tick(ticker.deltaMS)` from the Pixi ticker in `apps/web/src/render/OfficeCanvas.tsx`
+  > WIP (Claude): store part done (`team`, `world`, `sim`, `accumulatorMs`, `paused`, `seed`, `tick`, `readSimOptions`); the ticker call in `OfficeCanvas.tsx` waits for T002.
 - [x] T035 Export the simulation core (T025–T030) from `packages/domain/src/index.ts` (+ `exports.test.ts`)
 
 **Checkpoint**: dominio base y store con simulación listos — las historias pueden integrarse
