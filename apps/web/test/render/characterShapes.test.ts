@@ -159,3 +159,13 @@ describe('characterShapes (FR-021, FR-022, FR-024)', () => {
     expect(POSES).toEqual(poses);
   });
 });
+
+describe('characterShapes — seated', () => {
+  it('lowers the upper body and folds the legs, staying inside the body box', () => {
+    const standing = characterShapes(base, color, 'S', 'coffee', 0);
+    const seated = characterShapes(base, color, 'S', 'coffee', 0, true);
+    expect(top(seated, 'head')).toBeGreaterThan(top(standing, 'head'));
+    expect(top(seated, 'leg')).toBeGreaterThan(top(standing, 'leg'));
+    for (const shape of seated) expect(bounds(shape).maxY).toBeLessThanOrEqual(0);
+  });
+});
