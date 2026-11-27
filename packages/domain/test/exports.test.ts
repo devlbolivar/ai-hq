@@ -62,6 +62,21 @@ const AGENT_FUNCTIONS = [
   'characterSilhouette',
   'sceneOrder',
   'sceneHitTest',
+  'usePointKey',
+  'resolveUsePoint',
+  'usePointsFor',
+  'isReservedByOther',
+  'freeUsePointsFor',
+  'activityStatus',
+  'agentPosition',
+  'directionBetween',
+  'planRoute',
+  'advanceMovement',
+  'createSimWorld',
+  'createSimulation',
+  'stepSimulation',
+  'advanceFrame',
+  'agentById',
 ] as const;
 
 describe('@ai-hq/domain agent exports (002 contracts/domain-api.md)', () => {
@@ -81,6 +96,13 @@ describe('@ai-hq/domain agent exports (002 contracts/domain-api.md)', () => {
     'ROLE_MAX',
     'SYSTEM_PROMPT_MAX',
     'CHARACTER_BODY',
+    'STEP_DURATION_MS',
+    'SIM_STEP_MS',
+    'MAX_FRAME_MS',
+    'IDLE_PAUSE_MS',
+    'WORK_MS',
+    'BREAK_MS',
+    'CELEBRATE_MS',
   ])('exports %s', (name) => {
     expect(domain).toHaveProperty(name);
   });
