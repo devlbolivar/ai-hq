@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-27
 
-**Status**: Draft
+**Status**: Approved (2026-11-27, aprobada por el usuario tras `/speckit-clarify`)
 
 **Input**: User description: "002-marketing-team — Equipo de Marketing: agentes seleccionables en la
 oficina isométrica. Equipo semilla de 6 agentes (Head of Marketing/Estratega, Trend Scout/Investigador,
