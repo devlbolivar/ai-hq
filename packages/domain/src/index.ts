@@ -18,3 +18,4 @@ export { findPath } from './path/findPath';
 export * from './agents/stateMachine';
 export * from './agents/rng';
 export * from './agents/selection';
+export type * from './agents/types';
