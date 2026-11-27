@@ -171,7 +171,8 @@ type Activity = 'work' | 'meeting' | 'break' | 'review' | 'whiteboard' | 'wander
 function usePointKey(ref: UsePointRef): string            // "objectId#index"
 function resolveUsePoint(layout: OfficeLayout, ref: UsePointRef): UsePoint
 function usePointsFor(world: SimWorld, agentId: string, activity: Activity): readonly UsePointRef[]
-function isReservedByOther(sim: Simulation, ref: UsePointRef, agentId: string): boolean
+function isReservedByOther(sim: Simulation, world: SimWorld, ref: UsePointRef, agentId: string):
+  boolean
 function freeUsePointsFor(sim: Simulation, world: SimWorld, agentId: string, activity: Activity):
   readonly UsePointRef[]
 function activityStatus(activity: Activity): ActivityStatus | null  // whiteboard/wander → null
