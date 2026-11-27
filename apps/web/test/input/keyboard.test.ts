@@ -211,7 +211,8 @@ describe('keyboard camera input', () => {
     'releases held directions when focus enters %s until detached',
     (selector) => {
       const { actions, input } = setup();
-      container.innerHTML = '<input><textarea></textarea><select></select><div contenteditable><span></span></div>';
+      container.innerHTML =
+        '<input><textarea></textarea><select></select><div contenteditable><span></span></div>';
       const field = container.querySelector(selector)!;
       const detach = attachKeyboard(window, input);
       try {

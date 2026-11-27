@@ -24,7 +24,10 @@ export const KEY_PAN_SPEED = 600;
 const PAN_KEYS = new Set(['arrowup', 'w', 'arrowdown', 's', 'arrowleft', 'a', 'arrowright', 'd']);
 
 function isEditable(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest('input, textarea, select, [contenteditable]') !== null;
+  return (
+    target instanceof Element &&
+    target.closest('input, textarea, select, [contenteditable]') !== null
+  );
 }
 
 export function createKeyboardInput(actions: KeyboardCameraActions): KeyboardInput {

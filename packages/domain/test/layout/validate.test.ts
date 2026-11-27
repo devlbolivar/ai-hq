@@ -48,7 +48,8 @@ describe('validateLayout (FR-008, FR-009b)', () => {
   it('reports fractional entrance and use point coordinates and invalid zone geometry', () => {
     const tile = { x: 2, y: 3.5 };
     const layout = patchObject(marketingLayout, 'sofa', (o) => ({
-      ...o, usePoints: [{ tile, facing: 'N' }],
+      ...o,
+      usePoints: [{ tile, facing: 'N' }],
     }));
     const zone = layout.zones[0]!;
     const errors = errorsOf({
