@@ -18,6 +18,8 @@ const FOUNDATIONAL_FUNCTIONS = [
   'walkability',
   'reachableFrom',
   'drawOrder',
+  'silhouette',
+  'hitTest',
   'findPath',
 ] as const;
 
