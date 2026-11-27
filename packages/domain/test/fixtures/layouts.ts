@@ -14,7 +14,9 @@ export function makeLayout(overrides: Partial<OfficeLayout> = {}): OfficeLayout 
   };
 }
 
-export function makeObject(overrides: Partial<OfficeObject> & Pick<OfficeObject, 'id'>): OfficeObject {
+export function makeObject(
+  overrides: Partial<OfficeObject> & Pick<OfficeObject, 'id'>,
+): OfficeObject {
   return {
     kind: 'plant',
     name: 'Planta',

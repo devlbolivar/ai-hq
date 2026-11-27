@@ -34,8 +34,20 @@ describe('walkability (FR-020)', () => {
   it('keeps chairs, sofas and monitors walkable', () => {
     const objects = [
       makeObject({ id: 'chair', kind: 'chair', origin: { x: 3, y: 6 }, blocking: false }),
-      makeObject({ id: 'sofa', kind: 'sofa', origin: { x: 12, y: 10 }, size: { w: 2, h: 1 }, blocking: false }),
-      makeObject({ id: 'monitor', kind: 'monitor', origin: { x: 5, y: 5 }, blocking: false, z: 20 }),
+      makeObject({
+        id: 'sofa',
+        kind: 'sofa',
+        origin: { x: 12, y: 10 },
+        size: { w: 2, h: 1 },
+        blocking: false,
+      }),
+      makeObject({
+        id: 'monitor',
+        kind: 'monitor',
+        origin: { x: 5, y: 5 },
+        blocking: false,
+        z: 20,
+      }),
     ];
     const walk = walkability(makeLayout({ objects }));
     expect(walk[6]?.[3]).toBe(true);
@@ -76,7 +88,9 @@ describe('reachableFrom', () => {
   });
 
   it('reaches nothing when the start tile is blocked or outside the grid', () => {
-    const walk = walkability(makeLayout({ objects: [makeObject({ id: 'p', origin: { x: 8, y: 11 } })] }));
+    const walk = walkability(
+      makeLayout({ objects: [makeObject({ id: 'p', origin: { x: 8, y: 11 } })] }),
+    );
     expect(reachableFrom(walk, { x: 8, y: 11 }).flat().some(Boolean)).toBe(false);
     expect(reachableFrom(walk, { x: -1, y: 0 }).flat().some(Boolean)).toBe(false);
   });

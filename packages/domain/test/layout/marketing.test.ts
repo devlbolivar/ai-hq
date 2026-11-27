@@ -31,9 +31,13 @@ describe('marketingLayout', () => {
   });
 
   it('defines the five Marketing zones with Spanish names (data-model.md Zone.id, Zone.name)', () => {
-    expect(marketingLayout.zones.map((z) => z.id).sort()).toEqual(
-      ['coffee', 'desks', 'meeting', 'screens', 'whiteboard'],
-    );
+    expect(marketingLayout.zones.map((z) => z.id).sort()).toEqual([
+      'coffee',
+      'desks',
+      'meeting',
+      'screens',
+      'whiteboard',
+    ]);
     const names = Object.fromEntries(marketingLayout.zones.map((z) => [z.id, z.name]));
     expect(names).toEqual({
       desks: 'Escritorios',
@@ -46,7 +50,14 @@ describe('marketingLayout', () => {
 
   it('has desks desk-1…desk-6, each with an attached chair and monitor (data-model.md OfficeObject.id, OfficeObject.attachedTo; FR-005, FR-006)', () => {
     const desks = ofKind('desk');
-    expect(desks.map((d) => d.id)).toEqual(['desk-1', 'desk-2', 'desk-3', 'desk-4', 'desk-5', 'desk-6']);
+    expect(desks.map((d) => d.id)).toEqual([
+      'desk-1',
+      'desk-2',
+      'desk-3',
+      'desk-4',
+      'desk-5',
+      'desk-6',
+    ]);
     for (const desk of desks) {
       const chairs = ofKind('chair').filter((c) => c.attachedTo === desk.id);
       const monitors = ofKind('monitor').filter((m) => m.attachedTo === desk.id);
@@ -80,7 +91,13 @@ describe('marketingLayout', () => {
 
   it('has one screen per social network (data-model.md OfficeObject.network; FR-005)', () => {
     const screens = ofKind('screen');
-    expect(screens.map((s) => s.network).sort()).toEqual(['instagram', 'linkedin', 'tiktok', 'x', 'youtube']);
+    expect(screens.map((s) => s.network).sort()).toEqual([
+      'instagram',
+      'linkedin',
+      'tiktok',
+      'x',
+      'youtube',
+    ]);
     expect(get('screen-tiktok').name).toBe('Pantalla TikTok');
   });
 
@@ -136,7 +153,15 @@ describe('marketingLayout', () => {
   });
 
   it('blocks exactly the kinds listed in data-model.md (OfficeObject.blocking)', () => {
-    const blockingKinds = new Set(['wall', 'screen', 'whiteboard', 'desk', 'plant', 'meeting-table', 'coffee-machine']);
+    const blockingKinds = new Set([
+      'wall',
+      'screen',
+      'whiteboard',
+      'desk',
+      'plant',
+      'meeting-table',
+      'coffee-machine',
+    ]);
     for (const obj of objects) expect(obj.blocking, obj.id).toBe(blockingKinds.has(obj.kind));
   });
 });

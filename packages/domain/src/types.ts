@@ -137,5 +137,4 @@ export interface LayoutError {
 }
 
 export type ValidationResult =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly errors: readonly LayoutError[] };
+  { readonly ok: true } | { readonly ok: false; readonly errors: readonly LayoutError[] };
