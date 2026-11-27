@@ -67,10 +67,12 @@ test.describe('US2 — navegar con ratón (FR-013–FR-016)', () => {
     const viewport = viewportOf(page);
     await page.mouse.move(viewport.width / 2, viewport.height / 2);
 
-    await wheelNotches(page, -20);
+    // Each wheel event carries 10 notches (1.1^10 ≈ 2.6x) to keep the event count low.
+    const tenNotches = 10 * 100;
+    for (let i = 0; i < 2; i++) await page.mouse.wheel(0, -tenNotches);
     await expect.poll(async () => (await readCamera(page)).zoom).toBeCloseTo(ZOOM_MAX, 5);
 
-    await wheelNotches(page, 30);
+    for (let i = 0; i < 3; i++) await page.mouse.wheel(0, tenNotches);
     await expect.poll(async () => (await readCamera(page)).zoom).toBeCloseTo(ZOOM_MIN, 5);
   });
 

@@ -8,13 +8,16 @@ interface CameraHook {
   gridToScreen(tile: Coord): Point;
 }
 
-/** Opens the app and waits until the scene has been drawn once. */
+/**
+ * Opens the app and waits until the scene has been drawn once. The 2 s load budget (SC-001) is
+ * asserted by scene.spec.ts; here a slow start under parallel load must not fail camera tests.
+ */
 export async function openOffice(page: Page): Promise<void> {
   await page.goto('/', { waitUntil: 'commit' });
   await page.waitForFunction(
     () => (window as unknown as { __AIHQ__?: { ready: boolean } }).__AIHQ__?.ready === true,
     null,
-    { timeout: 2000 },
+    { timeout: 10_000 },
   );
 }
 
