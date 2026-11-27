@@ -65,6 +65,8 @@ constitución (PATCH 1.0.1: "Node 22 LTS o superior").
 | `vite`, `@vitejs/plugin-react` | Dev server y build | Mandada por la constitución (Vite) |
 | `vitest`, `@vitest/coverage-v8` | Tests y cobertura | Mandada por la constitución |
 | `@testing-library/react`, `@testing-library/user-event`, `jsdom` | Tests de controles | Mandada por la constitución |
+| `@testing-library/dom` | Peer obligatorio de `@testing-library/react` v16 | Sin ella `@testing-library/react` no se instala ni funciona |
+| `@types/react`, `@types/react-dom` | Tipos de React para `tsc` en modo `strict` | React 18 no incluye tipos propios; sin ellos falla `pnpm typecheck` |
 | `@playwright/test` | E2E | Mandada por la constitución |
 | `typescript`, `eslint`, `typescript-eslint`, `eslint-plugin-react-hooks`, `prettier` | Typecheck, lint y formato del quality gate | El gate exige `pnpm lint` y `typecheck` |
 
