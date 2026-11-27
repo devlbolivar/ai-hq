@@ -17,6 +17,7 @@ const FOUNDATIONAL_FUNCTIONS = [
   'renderLayoutAscii',
   'walkability',
   'reachableFrom',
+  'drawOrder',
   'findPath',
 ] as const;
 
