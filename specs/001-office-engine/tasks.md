@@ -42,7 +42,7 @@ Monorepo pnpm (ver plan.md): `packages/domain/{src,test}`, `apps/web/{src,test,e
 - [x] T007 Configure Vitest projects in `vitest.config.ts` at repo root (`domain`: environment node, `packages/domain/test/**`; `web`: environment jsdom, `apps/web/test/**`) with `@vitest/coverage-v8` thresholds: `packages/domain` ≥ 95 %, `packages/*` ≥ 80 %
 - [x] T008 RED→GREEN smoke tests: `packages/domain/test/smoke.test.ts` (imports the package) and `apps/web/test/App.test.tsx` (renders `App` with heading "AI HQ — Marketing" via Testing Library)
 - [x] T009 Configure Playwright in `apps/web/playwright.config.ts` (Chromium; `webServer`: `vite build --mode e2e && vite preview` with `VITE_E2E=1`) and smoke e2e `apps/web/e2e/smoke.spec.ts` (page loads, title "AI HQ")
-- [ ] T010 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm e2e` at repo root and fix configuration until green (no feature code)
+- [x] T010 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm e2e` at repo root and fix configuration until green (no feature code)
 
 ---
 

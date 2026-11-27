@@ -5,9 +5,7 @@ const PORT = 4173;
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? 'github' : 'list',
+  reporter: 'list',
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: 'on-first-retry',
@@ -16,7 +14,7 @@ export default defineConfig({
   webServer: {
     command: `vite build --mode e2e && vite preview --port ${PORT} --strictPort`,
     port: PORT,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     env: { VITE_E2E: '1' },
   },
 });
