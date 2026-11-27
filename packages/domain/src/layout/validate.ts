@@ -108,21 +108,21 @@ function checkBounds(layout: OfficeLayout): LayoutError[] {
 /** Two blocking objects must not share a tile. */
 function checkBlockingOverlaps(layout: OfficeLayout): LayoutError[] {
   const errors: LayoutError[] = [];
-  const occupant = new Map<string, string>();
-  for (const obj of layout.objects) {
+  const occupant = new Map<string, number>();
+  for (const [index, obj] of layout.objects.entries()) {
     if (!obj.blocking) continue;
     for (const t of footprint(obj)) {
       const key = `${t.x},${t.y}`;
       const other = occupant.get(key);
-      if (other !== undefined && other !== obj.id) {
+      if (other !== undefined && other !== index) {
         errors.push({
           code: 'BLOCKING_OVERLAP',
           objectId: obj.id,
           tile: t,
-          message: `Los objetos "${other}" y "${obj.id}" bloquean el mismo tile ${fmt(t)}.`,
+          message: `Los objetos "${layout.objects[other]!.id}" y "${obj.id}" bloquean el mismo tile ${fmt(t)}.`,
         });
       } else {
-        occupant.set(key, obj.id);
+        occupant.set(key, index);
       }
     }
   }
