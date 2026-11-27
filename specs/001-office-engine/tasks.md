@@ -167,9 +167,9 @@ sobre un escritorio → "Sin ruta"; desactivar limpia todo (quickstart 8–9).
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T069 [P] Contract test in `packages/domain/test/contract.test.ts` — `packages/domain/src/index.ts` exports every function and constant listed in contracts/domain-api.md
+- [x] T069 [P] Contract test in `packages/domain/test/contract.test.ts` — `packages/domain/src/index.ts` exports every function and constant listed in contracts/domain-api.md
 - [x] T070 [P] Performance smoke e2e in `apps/web/e2e/perf.spec.ts` — 5 s of continuous pan/zoom/hover keeps `window.__AIHQ__.fps` ≥ 50 headless (SC-003, research R10)
-- [ ] T071 [P] Write root `README.md` (requirements, install, scripts, monorepo structure, links to `specs/` and `AGENTS.md`)
+- [x] T071 [P] Write root `README.md` (requirements, install, scripts, monorepo structure, links to `specs/` and `AGENTS.md`)
 - [ ] T072 Refactor pass over `packages/domain/src/` and `apps/web/src/` with all tests green (no behavior change; `refactor:` commits)
 - [ ] T073 Run `pnpm test:coverage` and add missing tests until thresholds pass (domain ≥ 95 %, packages ≥ 80 %)
 - [ ] T074 Run the full quality gate `pnpm lint && pnpm typecheck && pnpm test && pnpm e2e` at repo root
