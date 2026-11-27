@@ -66,7 +66,7 @@ pueden empezar en paralelo a esta fase.
 - [x] T012 GREEN: write `marketingTeam` in `packages/domain/src/agents/seed.ts`
 - [x] T013 [P] (Codex) RED: state machine tests in `packages/domain/test/agents/stateMachine.test.ts` — table of the 36 (from, to) pairs per research R2: valid pairs accepted with their condition met, conditioned pairs rejected with the condition unmet (`UNREACHABLE`, `NOT_ON_FREE_USE_POINT`, `NOT_ARRIVED`), unlisted pairs rejected with `INVALID_TRANSITION` for every trigger that targets them; pair type is checked before the condition (FR-008, FR-010, SC-003)
 - [x] T014 (Codex) GREEN: implement `AGENT_STATUSES`, `isActivityStatus`, `transition` in `packages/domain/src/agents/stateMachine.ts`
-- [ ] T015 Export catalog, prompt, validation and seed from `packages/domain/src/index.ts` and extend `packages/domain/test/exports.test.ts` with their names from contracts/domain-api.md
+- [x] T015 Export catalog, prompt, validation and seed from `packages/domain/src/index.ts` and extend `packages/domain/test/exports.test.ts` with their names from contracts/domain-api.md
 - [x] T016 Integrate the Codex bundle `/tmp/codex-domain.bundle` (T013–T014, T023–T024, T049–T050): fetch, review the diff against contracts/domain-api.md, run `pnpm test`, `git merge --no-ff` marking those tasks, remove worktree, branch and ref; then export `transition`, the PRNG and selection from `index.ts` (+ `exports.test.ts`)
 
 ### Geometría de escena (Claude)

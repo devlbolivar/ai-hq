@@ -19,3 +19,7 @@ export * from './agents/stateMachine';
 export * from './agents/rng';
 export * from './agents/selection';
 export type * from './agents/types';
+export * from './agents/catalog';
+export * from './agents/prompt';
+export * from './agents/validate';
+export { marketingTeam } from './agents/seed';
