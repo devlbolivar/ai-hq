@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { marketingLayout } from '../../src/layout/marketing';
 import { marketingTeam } from '../../src/agents/seed';
 import {
+  ACCEPTANCE_SEED,
   advanceFrame,
   agentById,
   createSimulation,
@@ -174,5 +175,94 @@ describe('agentById', () => {
     const sim = createSimulation(world, 3);
     expect(agentById(sim, 'designer')?.reservation).toEqual({ objectId: 'desk-5', index: 0 });
     expect(agentById(sim, 'nobody')).toBeUndefined();
+  });
+});
+
+describe('autonomy inside the simulation (FR-016, FR-017, FR-019, SC-005, SC-006)', () => {
+  const usePointTiles = new Set(
+    marketingLayout.objects.flatMap((o) => o.usePoints.map((p) => `${p.tile.x},${p.tile.y}`)),
+  );
+
+  /** Runs `ms` of simulated time and returns every intermediate state. */
+  function run(seed: number, ms: number): Simulation[] {
+    const states = [createSimulation(world, seed)];
+    for (let t = 0; t < ms; t += SIM_STEP_MS) states.push(stepSimulation(states.at(-1)!, world));
+    return states;
+  }
+
+  it('decides after the idle pause: the agent leaves idle or starts an activity', () => {
+    const sim = createSimulation(world, 5);
+    const pause = sim.agents[0]!.timerMs!;
+    const before = steps(sim, pause / SIM_STEP_MS - 1).agents[0]!;
+    expect(before).toMatchObject({ status: 'idle', target: null });
+    const after = steps(sim, pause / SIM_STEP_MS).agents[0]!;
+    const decided = after.target !== null || after.status !== 'idle' || after.timerMs !== null;
+    expect(decided).toBe(true);
+  });
+
+  it('with ACCEPTANCE_SEED every agent completes an autonomous cycle within 60 s', () => {
+    const states = run(ACCEPTANCE_SEED, 60_000);
+    for (let i = 0; i < marketingTeam.length; i++) {
+      const completed = states.some(
+        (s, t) =>
+          t > 0 && s.agents[i]!.status === 'idle' && states[t - 1]!.agents[i]!.status !== 'idle',
+      );
+      expect(completed, marketingTeam[i]!.id).toBe(true);
+    }
+  });
+
+  it('never shares a use point nor steps on a non-walkable tile in 5 minutes', () => {
+    let sim = createSimulation(world, ACCEPTANCE_SEED);
+    for (let t = 0; t < 300_000; t += SIM_STEP_MS) {
+      sim = stepSimulation(sim, world);
+      const reserved = sim.agents
+        .filter((a) => a.reservation)
+        .map((a) => {
+          const obj = marketingLayout.objects.find((o) => o.id === a.reservation!.objectId)!;
+          const tile = obj.usePoints[a.reservation!.index]!.tile;
+          return `${tile.x},${tile.y}`;
+        });
+      expect(new Set(reserved).size).toBe(reserved.length);
+      for (const agent of sim.agents) {
+        expect(world.walk[agent.tile.y]![agent.tile.x]).toBe(true);
+        if (agent.next) expect(world.walk[agent.next.y]![agent.next.x]).toBe(true);
+        if (agent.next === null && usePointTiles.has(`${agent.tile.x},${agent.tile.y}`)) {
+          expect(agent.reservation).not.toBeNull();
+        }
+      }
+    }
+  });
+
+  it('keeps durations within bounds when the activity starts', () => {
+    const states = run(ACCEPTANCE_SEED, 120_000);
+    for (let t = 1; t < states.length; t++) {
+      states[t]!.agents.forEach((agent, i) => {
+        const prev = states[t - 1]!.agents[i]!;
+        if (agent.status === prev.status || agent.timerMs === null) return;
+        if (agent.status === 'working') expect(agent.timerMs).toBeGreaterThanOrEqual(10_000);
+        if (agent.status === 'working') expect(agent.timerMs).toBeLessThanOrEqual(20_000);
+        if (agent.status === 'break') expect(agent.timerMs).toBeGreaterThanOrEqual(5_000);
+        if (agent.status === 'break') expect(agent.timerMs).toBeLessThanOrEqual(10_000);
+      });
+    }
+  });
+
+  it('is identical at common instants for different frame sizes over 5 minutes', () => {
+    const byTime = new Map<number, string>();
+    let a = { sim: createSimulation(world, 99), accumulatorMs: 0 };
+    while (a.sim.timeMs < 300_000) {
+      a = advanceFrame(a.sim, world, a.accumulatorMs, 16);
+      byTime.set(a.sim.timeMs, JSON.stringify(a.sim));
+    }
+    let b = { sim: createSimulation(world, 99), accumulatorMs: 0 };
+    let compared = 0;
+    while (b.sim.timeMs < 300_000) {
+      b = advanceFrame(b.sim, world, b.accumulatorMs, 33);
+      const other = byTime.get(b.sim.timeMs);
+      if (other === undefined) continue;
+      expect(JSON.stringify(b.sim)).toBe(other);
+      compared++;
+    }
+    expect(compared).toBeGreaterThan(1000);
   });
 });
