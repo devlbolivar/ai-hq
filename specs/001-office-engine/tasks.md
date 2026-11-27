@@ -155,8 +155,8 @@ sobre un escritorio → "Sin ruta"; desactivar limpia todo (quickstart 8–9).
 - [x] T061 [US4] GREEN: implement `findPath` in `packages/domain/src/path/findPath.ts`; export from `packages/domain/src/index.ts`
 - [x] T062 [US4] RED: store debug tests in `apps/web/test/state/debug.test.ts` — transitions per data-model.md "Estado de UI" (`debug.enabled`, `debug.from`, `debug.to`, `debug.result`): toggle, first click = from, second = to + result, third restarts, disabling clears
 - [x] T063 [US4] GREEN: add the `debug` slice to `apps/web/src/state/store.ts`
-- [ ] T064 [P] [US4] RED: `apps/web/test/ui/DebugToggle.test.tsx` (role `switch` named "Modo depuración") and `apps/web/test/ui/PathStatus.test.tsx` ("Ruta: N pasos" / "Sin ruta", hidden without result)
-- [ ] T065 [US4] GREEN: implement `apps/web/src/ui/DebugToggle.tsx` and `apps/web/src/ui/PathStatus.tsx`
+- [x] T064 [P] [US4] RED: `apps/web/test/ui/DebugToggle.test.tsx` (role `switch` named "Modo depuración") and `apps/web/test/ui/PathStatus.test.tsx` ("Ruta: N pasos" / "Sin ruta", hidden without result)
+- [x] T065 [US4] GREEN: implement `apps/web/src/ui/DebugToggle.tsx` and `apps/web/src/ui/PathStatus.tsx`
 - [x] T066 [US4] RED: extend `apps/web/test/input/keyboard.test.ts` (`G` toggles debug) and `apps/web/test/input/mouse.test.ts` (in debug mode a click without drag selects the tile via `screenToGrid`; clicks outside the grid are ignored)
 - [x] T067 [US4] GREEN: extend `apps/web/src/input/keyboard.ts` and `apps/web/src/input/mouse.ts`
 - [ ] T068 [US4] Implement `apps/web/src/render/drawDebugOverlay.ts` (walkable grid, entrance, use points with facing arrows, path) and wire it plus `DebugToggle`/`PathStatus` into `OfficeCanvas.tsx` and `App.tsx`; make T059 pass
