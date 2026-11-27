@@ -82,15 +82,15 @@ correcto.
 **Independent Test**: abrir la app; `window.__AIHQ__.ready` en < 2 s, `drawOrder` contiene todos los
 objetos del layout en el orden de `drawOrder()` del dominio, cámara a 1x centrada (quickstart 1–4).
 
-- [ ] T027 [P] [US1] RED: e2e `apps/web/e2e/scene.spec.ts` — `window.__AIHQ__.ready` within 2 s; `layoutId` `'marketing'`; `drawOrder` equals the domain `drawOrder(marketingLayout)`; `camera.zoom` 1 and office centered; page background is dark (FR-001, FR-011, SC-001)
-- [ ] T028 [P] [US1] RED: draw order tests in `packages/domain/test/scene/drawOrder.test.ts` — chair `(3,6)` after desk `(3,5)`; each monitor after its desk (data-model.md `OfficeObject.z`); wall segments before objects in front of them; sofa after coffee machine; desk-4 after desk-1; result identical for a shuffled `objects` array (FR-012, research R4)
+- [ ] T027 [P] [US1] RED: e2e `apps/web/e2e/scene.spec.ts` — `window.__AIHQ__.ready` within 2 s; `layoutId` `'marketing'`; `drawOrder` equals the domain `drawOrder(marketingLayout)`; `camera.zoom` 1 and office centered; page background is dark (FR-001, FR-011, SC-001). This e2e is the RED test for the rendering tasks T034–T037 (Pixi is not unit-tested in jsdom, research R10)
+- [ ] T028 [P] [US1] RED: draw order tests in `packages/domain/test/scene/drawOrder.test.ts` — chair `(3,6)` after desk `(3,5)`; each monitor after its desk (data-model.md `OfficeObject.z`); wall segments before objects in front of them; sofa after coffee machine; desk-4 after desk-1; plant `(10,1)` after wall tile `(10,0)` (walls are 1x1 segments); result identical for a shuffled `objects` array (FR-012, research R4)
 - [ ] T029 [US1] GREEN: implement `drawOrder` in `packages/domain/src/scene/drawOrder.ts` and export it from `packages/domain/src/index.ts`
 - [ ] T030 [P] [US1] RED: palette tests in `apps/web/test/render/palette.test.ts` — the 5 networks (data-model.md `OfficeObject.network`) have distinct colors and distinct own icon ids; dark theme tokens defined (FR-007, FR-011)
 - [ ] T031 [P] [US1] GREEN: implement `apps/web/src/render/palette.ts`
 - [ ] T032 [P] [US1] RED: test hook tests in `apps/web/test/testHook.test.ts` — `window.__AIHQ__` exposed when `MODE !== 'production'` or `VITE_E2E=1`, absent in production; shape matches contracts/ui-contract.md
-- [ ] T033 [US1] GREEN: implement `apps/web/src/testHook.ts` (`ready`, `layoutId`, `drawOrder`, `camera`, `hover`, `debug`, `fps` moving average, `gridToScreen`)
+- [ ] T033 [US1] GREEN: implement `apps/web/src/testHook.ts` (`ready`, `layoutId`, `drawOrder`, `camera`, `hover`, `debug`, `fps` moving average, `gridToScreen` returning the screen position of the tile **center** via `tileCenter`, never the top vertex shared by 4 tiles)
 - [ ] T034 [P] [US1] Implement floor drawing (tile diamonds + front edge, cached as texture) in `apps/web/src/render/drawFloor.ts`
-- [ ] T035 [P] [US1] Implement per-kind drawing as isometric prisms (wall, screen with own icon, whiteboard, desk, chair, monitor, plant, sofa, meeting-table, coffee-machine) in `apps/web/src/render/drawObject.ts` using `palette.ts` — no external images (FR-010)
+- [ ] T035 [P] [US1] Implement per-kind drawing as isometric prisms (wall, screen with own icon, whiteboard, desk, chair, monitor, plant, sofa, meeting-table, coffee-machine) in `apps/web/src/render/drawObject.ts` using `palette.ts` — no external images (FR-010); `screen` and `whiteboard` also draw the wall segment behind them so the back walls have no gaps (FR-005a, FR-005b)
 - [ ] T036 [US1] Implement `apps/web/src/render/OfficeCanvas.tsx`: Pixi `Application`, layers `floor`/`objects`/`overlay`, objects added in `drawOrder`, root transform from store `camera` via `subscribe`, resize → `setViewport`, updates the test hook (research R1, R2)
 - [ ] T037 [US1] Mount `OfficeCanvas` full-screen in `apps/web/src/App.tsx` and make T027 pass
 
