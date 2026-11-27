@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ObjectKind, SocialNetwork } from '@ai-hq/domain';
+import { AGENT_COLORS, type ObjectKind, type SocialNetwork } from '@ai-hq/domain';
 import { kindColors, networkStyles, shade, theme, toCss } from '../../src/render/palette';
 
 const NETWORKS: readonly SocialNetwork[] = ['instagram', 'tiktok', 'youtube', 'linkedin', 'x'];
@@ -56,5 +56,25 @@ describe('palette (FR-007, FR-011)', () => {
     expect(shade(0x804020, 1.5)).toBe(0xc06030);
     expect(shade(0xffffff, 2)).toBe(0xffffff);
     expect(toCss(0x0a0b0c)).toBe('#0a0b0c');
+  });
+});
+
+describe('agent colors vs network colors (research R3)', () => {
+  const rgb = (hex: number) => [(hex >> 16) & 0xff, (hex >> 8) & 0xff, hex & 0xff] as const;
+  const distance = (a: number, b: number) => {
+    const [r1, g1, b1] = rgb(a);
+    const [r2, g2, b2] = rgb(b);
+    return Math.hypot(r1 - r2, g1 - g2, b1 - b2);
+  };
+
+  it('keeps every agent color at least 60 RGB units from every network color', () => {
+    for (const agent of AGENT_COLORS) {
+      for (const [network, style] of Object.entries(networkStyles)) {
+        expect(
+          distance(agent.hex, style.color),
+          `${agent.id} vs ${network}`,
+        ).toBeGreaterThanOrEqual(60);
+      }
+    }
   });
 });

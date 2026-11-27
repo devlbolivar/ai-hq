@@ -219,7 +219,7 @@ libre muestra el aviso; desactivar depuración devuelve la autonomía.
 
 - [ ] T085 [P] Extend `apps/web/e2e/perf.spec.ts` (project `perf`) — with `test.patrol(true)` and agent 1 selected (camera following), sample `fps` every 1 s for 10 s: every sample ≥ 50 and all 6 agents `walking` at each sample (FR-035)
 - [ ] T086 [P] Contract test in `packages/domain/test/contract.test.ts` — `packages/domain/src/index.ts` exports every name of `specs/002-marketing-team/contracts/domain-api.md`
-- [ ] T087 [P] Color distance test in `apps/web/test/render/palette.test.ts` — every agent color is far from every `networkStyles` color (research R3)
+- [x] T087 [P] Color distance test in `apps/web/test/render/palette.test.ts` — every agent color is far from every `networkStyles` color (research R3)
 - [ ] T088 Refactor pass over `packages/domain/src/agents/`, `scene/`, `camera/` and the new web files with all tests green (`refactor:` commits)
 - [ ] T089 Run `pnpm test:coverage` and add tests until thresholds pass (`packages/domain` ≥ 95 %, other packages ≥ 80 %)
 - [ ] T090 Codex read-only review (`gpt-6.2-sol`) of `git diff main...HEAD`; verify each finding, fix the confirmed ones (TDD) and discard false positives
