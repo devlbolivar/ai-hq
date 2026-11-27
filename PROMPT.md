@@ -41,7 +41,7 @@ Principios no negociables:
 ## Stack (fíjalo en `/speckit-plan`)
 - Monorepo pnpm: `apps/web`, `apps/server`, `packages/domain`, `packages/shared`
 - **web**: Vite + React 18 + TypeScript strict + PixiJS v8 (canvas iso) + Zustand + Tailwind + TanStack Query
-- **server**: Node 22 + Hono + Drizzle ORM + SQLite + SDK `@anthropic-ai/sdk`
+- **server**: Node 22 LTS o superior + Hono + Drizzle ORM + SQLite + SDK `@anthropic-ai/sdk`
 - **shared**: esquemas Zod (contratos API compartidos web/server)
 - **domain**: lógica pura sin I/O (máquinas de estado, iso math, A*, reglas de plataforma)
 - **Tests**: Vitest (unit/integración), Testing Library (componentes), MSW (mock de API en web),

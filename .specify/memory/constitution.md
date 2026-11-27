@@ -103,7 +103,7 @@ mantenimiento.
 - **Monorepo pnpm**: `apps/web`, `apps/server`, `packages/domain`, `packages/shared`.
 - **Lenguaje**: TypeScript en modo `strict` en todos los paquetes; sin `any` implícito.
 - **Web**: Vite + React 18 + PixiJS v8 (canvas isométrico) + Zustand + Tailwind CSS + TanStack Query.
-- **Server**: Node 22 + Hono + Drizzle ORM + SQLite + `@anthropic-ai/sdk`.
+- **Server**: Node 22 LTS o superior + Hono + Drizzle ORM + SQLite + `@anthropic-ai/sdk`.
 - **Contratos**: esquemas Zod en `packages/shared`, compartidos por web y server; ningún endpoint sin
   esquema de entrada y salida.
 - **Tests**: Vitest (unit e integración), Testing Library (componentes), MSW (mock de API en web),
@@ -142,4 +142,4 @@ mantenimiento.
   el plan (tabla de complejidad) o se corrige antes de implementar.
 - La guía operativa del proyecto (visión, features y alcance) está en `PROMPT.md`.
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-27 | **Last Amended**: 2026-11-27
+**Version**: 1.0.1 | **Ratified**: 2026-11-27 | **Last Amended**: 2026-11-27
