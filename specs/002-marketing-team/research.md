@@ -7,18 +7,18 @@ ningún `NEEDS CLARIFICATION`; estas decisiones fijan el "cómo" de lo que la sp
 
 - **Decision**: toda la lógica de agentes vive en `packages/domain/src/agents/` como funciones puras e
   inmutables: catálogo, equipo semilla, validación, prompt efectivo, máquina de estados, reservas,
-  elección de destino, movimiento, autonomía, simulación por pasos fijos, órdenes y selección. Se
-  reparte en dos bloques con API fijada en [contracts/domain-api.md](./contracts/domain-api.md) antes
-  de delegarlos a Codex:
-  - **Tanda 1** (`agents/catalog.ts`, `seed.ts`, `prompt.ts`, `validate.ts`, `stateMachine.ts`).
-  - **Tanda 2** (`agents/rng.ts`, `usePoints.ts`, `movement.ts`, `autonomy.ts`, `orders.ts`,
-    `simulation.ts`, `selection.ts`).
-  La parte de dominio que es geometría de dibujo (`scene/sceneOrder.ts`, `scene/characterHit.ts`,
-  `camera/follow.ts`) la hace Claude junto con el render, porque se valida a la vez que el dibujo.
+  elección de destino, movimiento, autonomía, simulación por pasos fijos, órdenes y selección. La API
+  está fijada en [contracts/domain-api.md](./contracts/domain-api.md) antes de delegar. Como a Codex
+  le queda poca cuota (decisión del usuario, 2026-11-27), solo recibe tres módulos puros, pequeños y sin
+  dependencias entre sí, en un único bundle y con el modelo `gpt-6.2-sol`:
+  `agents/stateMachine.ts`, `agents/rng.ts` y `agents/selection.ts`. Claude hace el resto del dominio
+  (tipos, catálogo, semilla, prompt, validación, puntos de uso, movimiento, autonomía, órdenes y
+  simulación) y la geometría de dibujo (`scene/sceneOrder.ts`, `scene/characterHit.ts`,
+  `camera/follow.ts`).
 - **Rationale**: la constitución (VII) exige dominio puro; FR-010 exige probar estados, movimiento,
   autonomía y selección sin dibujar. Con la API fijada, Codex y Claude trabajan en archivos disjuntos.
 - **Alternatives considered**: lógica de agentes en el store de Zustand (no testeable de forma aislada,
-  viola VII); un único bloque para Codex (bloquearía la web demasiado tiempo).
+  viola VII); dos tandas grandes para Codex (el plan inicial; descartado por la cuota restante).
 
 ## R2. Máquina de estados: guarda única por disparador
 

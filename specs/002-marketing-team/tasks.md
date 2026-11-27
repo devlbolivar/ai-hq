@@ -19,9 +19,11 @@ each story.
 
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (US1–US5)
-- **(Codex · Tanda N)**: tarea de dominio delegada a Codex en un worktree (plan.md, research R1); la API
-  está fijada en contracts/domain-api.md. Codex no toca `apps/web`, `specs/` ni `tasks.md`; Claude
-  marca sus casillas en el commit de merge del bundle.
+- **(Codex)**: tarea de dominio delegada a Codex (modelo `gpt-6.2-sol`, esfuerzo `medium`) en un
+  worktree (plan.md, research R1); la API está fijada en contracts/domain-api.md. Por cuota limitada,
+  Codex solo tiene 3 módulos puros y aislados: máquina de estados, PRNG y selección (6 tareas en un
+  único bundle). No toca `apps/web`, `specs/`, `tasks.md`, `index.ts` ni `exports.test.ts`; Claude
+  marca sus casillas en el commit de merge del bundle y exporta sus módulos.
 - **RED / GREEN**: RED = escribir tests que fallan; GREEN = mínimo código para pasarlos
 - **Hecho** = tests de la tarea en verde + `pnpm lint && pnpm typecheck` sin errores + casilla marcada
 
@@ -50,22 +52,22 @@ y store con la simulación. Lo necesitan todas las historias.
 cerrar esta fase. Los archivos nuevos de render y UI de las historias (T036–T040, T046, T051–T053, T058, T071)
 pueden empezar en paralelo a esta fase.
 
-### Tanda 1 — datos, validación y máquina de estados (Codex)
+### Datos, validación y máquina de estados (Claude; máquina de estados: Codex)
 
-- [ ] T003 [P] (Codex · Tanda 1) Define all agent types in `packages/domain/src/agents/types.ts` per contracts/domain-api.md and data-model.md: `AgentColorId`, `SkinTone`, `HairStyle`, `HairColor`, `Accessory`, `Appearance` (data-model.md `Appearance.skinTone`, `Appearance.hairStyle`, `Appearance.hairColor`, `Appearance.accessory`), `AgentProfile`, `AgentDraft`, `GridPosition`, `UsePointRef`, `Activity`, `AgentTarget`, `AgentRuntime`, `Simulation`, `SimWorld`, `Order`, `OrderResult` — all `readonly`
-- [ ] T004 [P] (Codex · Tanda 1) RED: catalog tests in `packages/domain/test/agents/catalog.test.ts` — 10 agent colors, 4 skin tones, 4 hair styles, 5 hair colors, 4 accessories incl. `none`; unique ids per list; distinct `hex` among agent colors; every entry has a Spanish `name`; `agentColorHex` returns the entry's hex (data-model.md "Catálogo", research R3)
-- [ ] T005 (Codex · Tanda 1) GREEN: implement `AGENT_COLORS`, `SKIN_TONES`, `HAIR_STYLES`, `HAIR_COLORS`, `ACCESSORIES`, `agentColorHex` in `packages/domain/src/agents/catalog.ts`
-- [ ] T006 [P] (Codex · Tanda 1) RED: prompt tests in `packages/domain/test/agents/prompt.test.ts` — `ZERO_INVENTION_RULE` mentions métricas, estadísticas, testimonios, citas, tendencias, datos de terceros and asks for the missing data; `cleanSystemPrompt` removes every literal copy of the rule and trims; `effectivePrompt` = rule + blank line + cleaned prompt and contains the rule exactly once, also when the prompt already contains it once or twice (FR-005, constitución V, research R4)
-- [ ] T007 (Codex · Tanda 1) GREEN: implement `ZERO_INVENTION_RULE`, `cleanSystemPrompt`, `effectivePrompt` in `packages/domain/src/agents/prompt.ts`
-- [ ] T008 [P] (Codex · Tanda 1) RED: team validation tests in `packages/domain/test/agents/validate.test.ts` — one invalid fixture per `AgentError.code` of data-model.md "Validación de agentes" (`DUPLICATE_ID`, `DUPLICATE_DESK`, `DUPLICATE_COLOR`, `DUPLICATE_NAME`, `UNKNOWN_DESK` incl. a non-desk object id, `UNKNOWN_COLOR`, `UNKNOWN_APPEARANCE` per appearance field, `EMPTY_FIELD`, `TOO_LONG`) covering data-model.md `AgentProfile.id`, `AgentProfile.name`, `AgentProfile.role`, `AgentProfile.color`, `AgentProfile.appearance`, `AgentProfile.deskId`, `AgentProfile.systemPrompt`; each error has `agentId`, `field` and a Spanish message naming both; several errors returned together; never throws (FR-006)
-- [ ] T009 [P] (Codex · Tanda 1) RED: draft validation tests in the same file's `describe('validateAgentDraft')` block — name trimmed 1–30, unique case-insensitively against the other agents; role 1–40; color in catalog and not used by another agent (message names that agent); appearance fields in catalog; system prompt 1–4000 measured on `cleanSystemPrompt`; `{}` when valid; `applyDraft` keeps `id`/`deskId`, trims name/role and stores the cleaned prompt (FR-030, contracts/domain-api.md "Validación")
-- [ ] T010 (Codex · Tanda 1) GREEN: implement `validateTeam`, `validateAgentDraft`, `applyDraft` and the length constants in `packages/domain/src/agents/validate.ts` until T008–T009 pass
-- [ ] T011 [P] (Codex · Tanda 1) RED: seed tests in `packages/domain/test/agents/seed.test.ts` — exactly 6 profiles in FR-001 order with the ids, English names, Spanish roles and `desk-1`…`desk-6` of contracts/domain-api.md; distinct colors and distinct appearance combinations (FR-003); each Spanish `systemPrompt` describes its role's tasks per FR-004 (keyword checks per role) and does not contain the rule; `validateTeam(marketingTeam, marketingLayout).ok`; `effectivePrompt` of each of the 6 contains the rule exactly once (FR-005)
-- [ ] T012 (Codex · Tanda 1) GREEN: write `marketingTeam` in `packages/domain/src/agents/seed.ts`
-- [ ] T013 [P] (Codex · Tanda 1) RED: state machine tests in `packages/domain/test/agents/stateMachine.test.ts` — table of the 36 (from, to) pairs per research R2: valid pairs accepted with their condition met, conditioned pairs rejected with the condition unmet (`UNREACHABLE`, `NOT_ON_FREE_USE_POINT`, `NOT_ARRIVED`), unlisted pairs rejected with `INVALID_TRANSITION` for every trigger that targets them; pair type is checked before the condition (FR-008, FR-010, SC-003)
-- [ ] T014 (Codex · Tanda 1) GREEN: implement `AGENT_STATUSES`, `isActivityStatus`, `transition` in `packages/domain/src/agents/stateMachine.ts`
-- [ ] T015 (Codex · Tanda 1) Export the Tanda 1 API from `packages/domain/src/index.ts` and extend `packages/domain/test/exports.test.ts` with every Tanda 1 name of contracts/domain-api.md; deliver the bundle `/tmp/codex-t1.bundle`
-- [ ] T016 Integrate Tanda 1: fetch the bundle, review the diff against contracts/domain-api.md, run `pnpm test`, `git merge --no-ff` marking T003–T015, remove worktree, branch and ref
+- [ ] T003 [P] Define all agent types in `packages/domain/src/agents/types.ts` per contracts/domain-api.md and data-model.md: `AgentColorId`, `SkinTone`, `HairStyle`, `HairColor`, `Accessory`, `Appearance` (data-model.md `Appearance.skinTone`, `Appearance.hairStyle`, `Appearance.hairColor`, `Appearance.accessory`), `AgentProfile`, `AgentDraft`, `GridPosition`, `UsePointRef`, `Activity`, `AgentTarget`, `AgentRuntime`, `Simulation`, `SimWorld`, `Order`, `OrderResult` — all `readonly`
+- [ ] T004 [P] RED: catalog tests in `packages/domain/test/agents/catalog.test.ts` — 10 agent colors, 4 skin tones, 4 hair styles, 5 hair colors, 4 accessories incl. `none`; unique ids per list; distinct `hex` among agent colors; every entry has a Spanish `name`; `agentColorHex` returns the entry's hex (data-model.md "Catálogo", research R3)
+- [ ] T005 GREEN: implement `AGENT_COLORS`, `SKIN_TONES`, `HAIR_STYLES`, `HAIR_COLORS`, `ACCESSORIES`, `agentColorHex` in `packages/domain/src/agents/catalog.ts`
+- [ ] T006 [P] RED: prompt tests in `packages/domain/test/agents/prompt.test.ts` — `ZERO_INVENTION_RULE` mentions métricas, estadísticas, testimonios, citas, tendencias, datos de terceros and asks for the missing data; `cleanSystemPrompt` removes every literal copy of the rule and trims; `effectivePrompt` = rule + blank line + cleaned prompt and contains the rule exactly once, also when the prompt already contains it once or twice (FR-005, constitución V, research R4)
+- [ ] T007 GREEN: implement `ZERO_INVENTION_RULE`, `cleanSystemPrompt`, `effectivePrompt` in `packages/domain/src/agents/prompt.ts`
+- [ ] T008 [P] RED: team validation tests in `packages/domain/test/agents/validate.test.ts` — one invalid fixture per `AgentError.code` of data-model.md "Validación de agentes" (`DUPLICATE_ID`, `DUPLICATE_DESK`, `DUPLICATE_COLOR`, `DUPLICATE_NAME`, `UNKNOWN_DESK` incl. a non-desk object id, `UNKNOWN_COLOR`, `UNKNOWN_APPEARANCE` per appearance field, `EMPTY_FIELD`, `TOO_LONG`) covering data-model.md `AgentProfile.id`, `AgentProfile.name`, `AgentProfile.role`, `AgentProfile.color`, `AgentProfile.appearance`, `AgentProfile.deskId`, `AgentProfile.systemPrompt`; each error has `agentId`, `field` and a Spanish message naming both; several errors returned together; never throws (FR-006)
+- [ ] T009 [P] RED: draft validation tests in the same file's `describe('validateAgentDraft')` block — name trimmed 1–30, unique case-insensitively against the other agents; role 1–40; color in catalog and not used by another agent (message names that agent); appearance fields in catalog; system prompt 1–4000 measured on `cleanSystemPrompt`; `{}` when valid; `applyDraft` keeps `id`/`deskId`, trims name/role and stores the cleaned prompt (FR-030, contracts/domain-api.md "Validación")
+- [ ] T010 GREEN: implement `validateTeam`, `validateAgentDraft`, `applyDraft` and the length constants in `packages/domain/src/agents/validate.ts` until T008–T009 pass
+- [ ] T011 [P] RED: seed tests in `packages/domain/test/agents/seed.test.ts` — exactly 6 profiles in FR-001 order with the ids, English names, Spanish roles and `desk-1`…`desk-6` of contracts/domain-api.md; distinct colors and distinct appearance combinations (FR-003); each Spanish `systemPrompt` describes its role's tasks per FR-004 (keyword checks per role) and does not contain the rule; `validateTeam(marketingTeam, marketingLayout).ok`; `effectivePrompt` of each of the 6 contains the rule exactly once (FR-005)
+- [ ] T012 GREEN: write `marketingTeam` in `packages/domain/src/agents/seed.ts`
+- [ ] T013 [P] (Codex) RED: state machine tests in `packages/domain/test/agents/stateMachine.test.ts` — table of the 36 (from, to) pairs per research R2: valid pairs accepted with their condition met, conditioned pairs rejected with the condition unmet (`UNREACHABLE`, `NOT_ON_FREE_USE_POINT`, `NOT_ARRIVED`), unlisted pairs rejected with `INVALID_TRANSITION` for every trigger that targets them; pair type is checked before the condition (FR-008, FR-010, SC-003)
+- [ ] T014 (Codex) GREEN: implement `AGENT_STATUSES`, `isActivityStatus`, `transition` in `packages/domain/src/agents/stateMachine.ts`
+- [ ] T015 Export catalog, prompt, validation and seed from `packages/domain/src/index.ts` and extend `packages/domain/test/exports.test.ts` with their names from contracts/domain-api.md
+- [ ] T016 Integrate the Codex bundle `/tmp/codex-domain.bundle` (T013–T014, T023–T024, T049–T050): fetch, review the diff against contracts/domain-api.md, run `pnpm test`, `git merge --no-ff` marking those tasks, remove worktree, branch and ref; then export `transition`, the PRNG and selection from `index.ts` (+ `exports.test.ts`)
 
 ### Geometría de escena (Claude)
 
@@ -76,24 +78,24 @@ pueden empezar en paralelo a esta fase.
 - [ ] T021 RED: `sceneHitTest` tests in `packages/domain/test/scene/characterHit.test.ts` — a point on a character's body returns `{ type: 'agent', id }`; a character drawn in front of an object wins and vice versa (desk in front of a back-row character); overlapping characters → the one drawn in front; points above the head (bubble) and on the ring area outside the body fall through; otherwise same as `hitTest` of the 001 (FR-023, US1-6)
 - [ ] T022 GREEN: implement `sceneHitTest` in `packages/domain/src/scene/characterHit.ts` and export T018–T022 from `packages/domain/src/index.ts` (+ `exports.test.ts`)
 
-### Tanda 2 (núcleo) — PRNG, puntos de uso, movimiento y simulación (Codex)
+### Núcleo de simulación — PRNG (Codex), puntos de uso, movimiento y simulación (Claude)
 
-- [ ] T023 [P] (Codex · Tanda 2) RED: PRNG tests in `packages/domain/test/agents/rng.test.ts` — same seed → same sequence; `nextFloat` in [0, 1); `randomInt` inclusive bounds and uniform-ish over 10 000 draws; `pick` always consumes one value (also with one item); state is a `uint32` (data-model.md `Simulation.rng`, research R7)
-- [ ] T024 (Codex · Tanda 2) GREEN: implement `seedRng`, `nextFloat`, `randomInt`, `pick` in `packages/domain/src/agents/rng.ts`
-- [ ] T025 [P] (Codex · Tanda 2) RED: use point tests in `packages/domain/test/agents/usePoints.test.ts` — `usePointsFor` per activity and order (work → only the agent's own desk point; break → coffee then sofa; meeting 6; review/whiteboard 1; wander none); `usePointKey`; `resolveUsePoint`; `isReservedByOther` compares resolved tiles (data-model.md `UsePointRef`, `AgentRuntime.reservation`, FR-009, FR-014)
-- [ ] T026 (Codex · Tanda 2) GREEN: implement `packages/domain/src/agents/usePoints.ts`
-- [ ] T027 [P] (Codex · Tanda 2) RED: movement tests in `packages/domain/test/agents/movement.test.ts` — `planRoute` = `findPath(...).path.slice(1)` or `null` on any failure; `advanceMovement` at 2 tiles/s: after 250 ms the position is halfway, after 500 ms `tile = next`; position always on the `tile→next` segment; turns only at tile boundaries; `facing` follows the current step; `arrived` on the last tile (FR-011–FR-013, data-model.md `AgentRuntime.tile`, `AgentRuntime.next`, `AgentRuntime.stepMs`, `AgentRuntime.route`, `AgentRuntime.facing`)
-- [ ] T028 (Codex · Tanda 2) GREEN: implement `STEP_DURATION_MS`, `agentPosition`, `directionBetween`, `planRoute`, `advanceMovement` in `packages/domain/src/agents/movement.ts`
-- [ ] T029 [P] (Codex · Tanda 2) RED: simulation core tests in `packages/domain/test/agents/simulation.test.ts` — `createSimWorld` throws listing errors for an invalid layout, an invalid team or two use points on one tile; `createSimulation` puts every agent `idle` on its desk point with its reservation and facing (FR-007); `stepSimulation` adds `SIM_STEP_MS`; arrivals go through `transition`; timers start counting on the next step; `advanceFrame` clips each frame to 250 ms (`[500]` advances 250 ms, `[250, 250]` 500 ms) and same clipped sums give equal simulations (FR-015, data-model.md `Simulation.timeMs`, `AgentRuntime.timerMs`, `AgentRuntime.celebrateMs`)
-- [ ] T030 (Codex · Tanda 2) GREEN: implement `SIM_STEP_MS`, `MAX_FRAME_MS`, `createSimWorld`, `createSimulation`, `stepSimulation` (movement, arrivals, activity timers and celebration; no autonomous decisions yet), `advanceFrame`, `agentById` in `packages/domain/src/agents/simulation.ts`
+- [ ] T023 [P] (Codex) RED: PRNG tests in `packages/domain/test/agents/rng.test.ts` — same seed → same sequence; `nextFloat` in [0, 1); `randomInt` inclusive bounds and uniform-ish over 10 000 draws; `pick` always consumes one value (also with one item); state is a `uint32` (data-model.md `Simulation.rng`, research R7)
+- [ ] T024 (Codex) GREEN: implement `seedRng`, `nextFloat`, `randomInt`, `pick` in `packages/domain/src/agents/rng.ts`
+- [ ] T025 [P] RED: use point tests in `packages/domain/test/agents/usePoints.test.ts` — `usePointsFor` per activity and order (work → only the agent's own desk point; break → coffee then sofa; meeting 6; review/whiteboard 1; wander none); `usePointKey`; `resolveUsePoint`; `isReservedByOther` compares resolved tiles (data-model.md `UsePointRef`, `AgentRuntime.reservation`, FR-009, FR-014)
+- [ ] T026 GREEN: implement `packages/domain/src/agents/usePoints.ts`
+- [ ] T027 [P] RED: movement tests in `packages/domain/test/agents/movement.test.ts` — `planRoute` = `findPath(...).path.slice(1)` or `null` on any failure; `advanceMovement` at 2 tiles/s: after 250 ms the position is halfway, after 500 ms `tile = next`; position always on the `tile→next` segment; turns only at tile boundaries; `facing` follows the current step; `arrived` on the last tile (FR-011–FR-013, data-model.md `AgentRuntime.tile`, `AgentRuntime.next`, `AgentRuntime.stepMs`, `AgentRuntime.route`, `AgentRuntime.facing`)
+- [ ] T028 GREEN: implement `STEP_DURATION_MS`, `agentPosition`, `directionBetween`, `planRoute`, `advanceMovement` in `packages/domain/src/agents/movement.ts`
+- [ ] T029 [P] RED: simulation core tests in `packages/domain/test/agents/simulation.test.ts` — `createSimWorld` throws listing errors for an invalid layout, an invalid team or two use points on one tile; `createSimulation` puts every agent `idle` on its desk point with its reservation and facing (FR-007); `stepSimulation` adds `SIM_STEP_MS`; arrivals go through `transition`; timers start counting on the next step; `advanceFrame` clips each frame to 250 ms (`[500]` advances 250 ms, `[250, 250]` 500 ms) and same clipped sums give equal simulations (FR-015, data-model.md `Simulation.timeMs`, `AgentRuntime.timerMs`, `AgentRuntime.celebrateMs`)
+- [ ] T030 GREEN: implement `SIM_STEP_MS`, `MAX_FRAME_MS`, `createSimWorld`, `createSimulation`, `stepSimulation` (movement, arrivals, activity timers and celebration; no autonomous decisions yet), `advanceFrame`, `agentById` in `packages/domain/src/agents/simulation.ts`
 
-### Store con la simulación (Claude, tras T002 y la integración de la Tanda 2)
+### Store con la simulación (Claude, tras T002 y T030)
 
 - [ ] T031 [P] RED: seed source tests in `apps/web/test/seed.test.ts` — `?seed=N` parsed as integer; invalid or missing → value from an injected clock; `?paused=1` honored only when the test hook is exposed (contracts/ui-contract.md "Hook de pruebas")
 - [ ] T032 GREEN: implement `readSimOptions(location, env, now)` in `apps/web/src/seed.ts`
 - [ ] T033 RED: store tests in `apps/web/test/state/agents.test.ts` — the store holds `team` = `marketingTeam`, `world`, `sim` from the seed; `tick(dtMs)` calls `advanceFrame` and keeps `accumulatorMs`; `tick` does nothing while `paused`; creating the store with an invalid team throws with the validation messages (data-model.md "Estado de la web": `team`, `world`, `sim`, `accumulatorMs`, `paused`)
 - [ ] T034 GREEN: add `team`, `world`, `sim`, `accumulatorMs`, `paused`, `seed` and `tick` to `apps/web/src/state/store.ts`; call `store.getState().tick(ticker.deltaMS)` from the Pixi ticker in `apps/web/src/render/OfficeCanvas.tsx`
-- [ ] T035 Integrate the Tanda 2 core bundle (T023–T030): fetch, review, `pnpm test`, `git merge --no-ff` marking T023–T030, clean up
+- [ ] T035 Export the simulation core (T025–T030) from `packages/domain/src/index.ts` (+ `exports.test.ts`)
 
 **Checkpoint**: dominio base y store con simulación listos — las historias pueden integrarse
 
@@ -134,8 +136,8 @@ cámara que centra y sigue.
 **Independent Test**: cada método de selección deja el agente con anillo, tarjeta destacada y centrado;
 `Esc` quita la selección; arrastrar deja de seguir sin deseleccionar.
 
-- [ ] T049 [P] [US2] (Codex · Tanda 2) RED: selection tests in `packages/domain/test/agents/selection.test.ts` — `selectByNumber` 1–6 selects, 7–9 keep `current`; `cycleSelection` wraps both ways, from `null` Tab → first and Shift+Tab → last, empty team → `null` (FR-026, US2-3, US2-4)
-- [ ] T050 [US2] (Codex · Tanda 2) GREEN: implement `packages/domain/src/agents/selection.ts` and export it
+- [ ] T049 [P] [US2] (Codex) RED: selection tests in `packages/domain/test/agents/selection.test.ts` — `selectByNumber` 1–6 selects, 7–9 keep `current`; `cycleSelection` wraps both ways, from `null` Tab → first and Shift+Tab → last, empty team → `null` (FR-026, US2-3, US2-4)
+- [ ] T050 [US2] (Codex) GREEN: implement `packages/domain/src/agents/selection.ts` and export it
 - [ ] T051 [P] [US2] RED: `centerOn` tests in `packages/domain/test/camera/follow.test.ts` — keeps zoom; the world point lands on the viewport center when the limits allow; otherwise the closest camera allowed by the 001 limits (FR-028)
 - [ ] T052 [US2] GREEN: implement `centerOn` in `packages/domain/src/camera/follow.ts` and export it
 - [ ] T053 [P] [US2] RED→GREEN: `apps/web/test/state/follow.test.ts` then `apps/web/src/state/follow.ts` — `followOffset(start, target, elapsedMs)` eases out and reaches `target` at 400 ms (≤ 500 ms, FR-028)
@@ -159,11 +161,11 @@ cámara que centra y sigue.
 **Independent Test**: con `?seed=<ACCEPTANCE_SEED>`, en 60 s cada agente completa un ciclo; `Space`
 congela y reanuda; misma semilla → misma secuencia (dominio).
 
-- [ ] T062 [P] [US3] (Codex · Tanda 2) RED: autonomy tests in `packages/domain/test/agents/autonomy.test.ts` — activity by `pick`, fallback only when the chosen activity has no free candidate; `pick` among candidates always; unreachable chosen candidate → `target: null`; work → own desk; break → free coffee/sofa point; whiteboard → ends `idle` facing it; wander tile is walkable, not a use point, not its tile, not occupied or targeted by another; never meeting/review (FR-016, FR-018, research R8)
-- [ ] T063 [US3] (Codex · Tanda 2) GREEN: implement `packages/domain/src/agents/autonomy.ts`
-- [ ] T064 [US3] (Codex · Tanda 2) RED: autonomy-in-simulation tests in `packages/domain/test/agents/simulation.test.ts` — idle pause 3–8 s then decision; durations work 10–20 s, break 5–10 s, drawn when the activity starts; natural end of `working` celebrates 1 s still `working`, then `idle`; reservations kept while `idle` on a point and released only when leaving; never two agents on one point and never on a non-walkable tile over 5 simulated minutes (SC-005); `ACCEPTANCE_SEED` gives every agent a full autonomous cycle within 60 000 ms (FR-019); two runs of 5 simulated minutes with different frame sizes are identical at every common simulated instant (SC-006)
-- [ ] T065 [US3] (Codex · Tanda 2) GREEN: call autonomy from `stepSimulation` in `packages/domain/src/agents/simulation.ts`, fix `ACCEPTANCE_SEED`, export T063–T065
-- [ ] T066 [US3] Integrate Tanda 2 (autonomy, selection, orders: T049–T050, T062–T065, T077–T078): fetch, review, `pnpm test`, `git merge --no-ff` marking them, clean up; write the `ACCEPTANCE_SEED` value in `specs/002-marketing-team/quickstart.md`
+- [ ] T062 [P] [US3] RED: autonomy tests in `packages/domain/test/agents/autonomy.test.ts` — activity by `pick`, fallback only when the chosen activity has no free candidate; `pick` among candidates always; unreachable chosen candidate → `target: null`; work → own desk; break → free coffee/sofa point; whiteboard → ends `idle` facing it; wander tile is walkable, not a use point, not its tile, not occupied or targeted by another; never meeting/review (FR-016, FR-018, research R8)
+- [ ] T063 [US3] GREEN: implement `packages/domain/src/agents/autonomy.ts`
+- [ ] T064 [US3] RED: autonomy-in-simulation tests in `packages/domain/test/agents/simulation.test.ts` — idle pause 3–8 s then decision; durations work 10–20 s, break 5–10 s, drawn when the activity starts; natural end of `working` celebrates 1 s still `working`, then `idle`; reservations kept while `idle` on a point and released only when leaving; never two agents on one point and never on a non-walkable tile over 5 simulated minutes (SC-005); `ACCEPTANCE_SEED` gives every agent a full autonomous cycle within 60 000 ms (FR-019); two runs of 5 simulated minutes with different frame sizes are identical at every common simulated instant (SC-006)
+- [ ] T065 [US3] GREEN: call autonomy from `stepSimulation` in `packages/domain/src/agents/simulation.ts`, fix `ACCEPTANCE_SEED`, export T063–T065
+- [ ] T066 [US3] Write the `ACCEPTANCE_SEED` value fixed in T065 in `specs/002-marketing-team/quickstart.md`
 - [ ] T067 [US3] RED→GREEN: pause — store tests (`togglePause`; `tick` frozen; animation time is `sim.timeMs`) in `apps/web/test/state/agents.test.ts`, keyboard `Space` (same focus rules as T056) in `apps/web/test/input/keyboard.test.ts`, and `apps/web/test/ui/PauseIndicator.test.tsx` (status "Simulación en pausa"); implement in `store.ts`, `keyboard.ts`, `apps/web/src/ui/PauseIndicator.tsx` (FR-020, US3-8)
 - [ ] T068 [US3] RED: pose mapping tests in `apps/web/test/render/pose.test.ts` — `poseFor(runtime)`: `walking` → walk, `working` → type (celebrate while `celebrateMs > 0`), `break` → coffee (standing at the coffee machine, sitting on the sofa), `idle`/`meeting`/`waiting_review` → idle breathing; facing from `AgentRuntime.facing` (FR-013, FR-024)
 - [ ] T069 [US3] GREEN: implement `apps/web/src/render/character/pose.ts` and use it in `character/pixi.ts` with `t = sim.timeMs`
@@ -199,11 +201,8 @@ desactivar depuración.
 **Independent Test**: con depuración, cada orden lleva al agente al estado y punto esperados; sin sitio
 libre muestra el aviso; desactivar depuración devuelve la autonomía.
 
-> T077–T078 las ejecuta Codex con el resto de la Tanda 2 y se integran en T066, antes de las
-> tareas web de esta fase.
-
-- [ ] T077 [P] [US5] (Codex · Tanda 2) RED: order tests in `packages/domain/test/agents/orders.test.ts` — nearest free point by route length with layout-order ties; `work` always own desk; on the point → direct `start-activity`; `NO_FREE_SPOT`/`UNREACHABLE` leave `sim` untouched; repeating a forced activity → `changed: false`; same activity from autonomy is adopted (`forced`, timers cleared, no celebration); interrupting autonomous work does not celebrate; mid-step orders take effect at `next` and the last order wins; stopping ends the step and halts on the first route tile that is not someone else's use point, keeping its own reservation only when stopping on it; `go-to` rejects use points and occupied/targeted tiles (`INVALID_DESTINATION`); `cancelForcedOrders` = `idle` for every forced agent and autonomy resumes; forced agents never decide or end by time (FR-017a, FR-034, contracts/domain-api.md "Órdenes", data-model.md `AgentRuntime.forced`, `AgentRuntime.target`)
-- [ ] T078 [US5] (Codex · Tanda 2) GREEN: implement `applyOrder`, `cancelForcedOrders` in `packages/domain/src/agents/orders.ts` and export them; deliver the Tanda 2 bundle `/tmp/codex-t2.bundle`
+- [ ] T077 [P] [US5] RED: order tests in `packages/domain/test/agents/orders.test.ts` — nearest free point by route length with layout-order ties; `work` always own desk; on the point → direct `start-activity`; `NO_FREE_SPOT`/`UNREACHABLE` leave `sim` untouched; repeating a forced activity → `changed: false`; same activity from autonomy is adopted (`forced`, timers cleared, no celebration); interrupting autonomous work does not celebrate; mid-step orders take effect at `next` and the last order wins; stopping ends the step and halts on the first route tile that is not someone else's use point, keeping its own reservation only when stopping on it; `go-to` rejects use points and occupied/targeted tiles (`INVALID_DESTINATION`); `cancelForcedOrders` = `idle` for every forced agent and autonomy resumes; forced agents never decide or end by time (FR-017a, FR-034, contracts/domain-api.md "Órdenes", data-model.md `AgentRuntime.forced`, `AgentRuntime.target`)
+- [ ] T078 [US5] GREEN: implement `applyOrder`, `cancelForcedOrders` in `packages/domain/src/agents/orders.ts` and export them
 
 - [ ] T079 [US5] RED: store order tests in `apps/web/test/state/orders.test.ts` — `sendOrder(id, order)` calls `applyOrder`; `NO_FREE_SPOT` sets `notice` "Sin sitio libre" (cleared after ~2 s); while `paused` orders queue and apply in arrival order on resume; `toggleDebug` off calls `cancelForcedOrders` and empties the queue (data-model.md `OfficeState.queuedOrders`, `OfficeState.notice`; FR-020, FR-034)
 - [ ] T080 [US5] GREEN: implement `sendOrder`, the queue and `notice` in `apps/web/src/state/store.ts`
@@ -223,7 +222,7 @@ libre muestra el aviso; desactivar depuración devuelve la autonomía.
 - [ ] T087 [P] Color distance test in `apps/web/test/render/palette.test.ts` — every agent color is far from every `networkStyles` color (research R3)
 - [ ] T088 Refactor pass over `packages/domain/src/agents/`, `scene/`, `camera/` and the new web files with all tests green (`refactor:` commits)
 - [ ] T089 Run `pnpm test:coverage` and add tests until thresholds pass (`packages/domain` ≥ 95 %, other packages ≥ 80 %)
-- [ ] T090 Codex read-only review of `git diff main...HEAD`; verify each finding, fix the confirmed ones (TDD) and discard false positives
+- [ ] T090 Codex read-only review (`gpt-6.2-sol`) of `git diff main...HEAD`; verify each finding, fix the confirmed ones (TDD) and discard false positives
 - [ ] T091 Run the full quality gate `pnpm lint && pnpm typecheck && pnpm test && pnpm e2e --workers=3` and the isolated perf project
 - [ ] T092 Write `specs/002-marketing-team/validation.md` (template for the user's manual validation of quickstart.md scenarios 1–6, incl. SC-002, SC-007 and SC-008) and stop for the user
 
@@ -234,9 +233,10 @@ libre muestra el aviso; desactivar depuración devuelve la autonomía.
 ### Phase Dependencies
 
 - **Setup (Phase 1)**: T001 sin dependencias. T002 espera a que el usuario mergee el PR del fix.
-- **Foundational (Phase 2)**: Tanda 1 (T003–T016) y geometría (T017–T022) en paralelo y sin esperar a
-  T002. Tanda 2 núcleo (T023–T030) tras T016 (usa tipos y `transition`). El store (T031–T035) necesita
-  T002 y la Tanda 2 núcleo integrada.
+- **Foundational (Phase 2)**: el bundle de Codex (T013–T014, T023–T024, T049–T050) arranca ya y no
+  depende de nada. Claude hace a la vez datos y validación (T003–T012, T015) y geometría (T017–T022),
+  sin esperar a T002. T025–T030 necesitan T003 y, para `stepSimulation`, `transition` (T016). El store
+  (T031–T035) necesita T002 y T030.
 - **US1–US5 (Phases 3–7)**: su integración depende de Foundational. US1 es el MVP.
 - **Polish (Phase 8)**: depende de las historias entregadas.
 
@@ -246,17 +246,18 @@ libre muestra el aviso; desactivar depuración devuelve la autonomía.
 - **US2 (P2)**: T051–T053, T058 independientes; T054–T057, T059–T061 tras US1 (T042, T045, T047).
   T061 usa `test.order` (T083) para el seguimiento al caminar: si T083 no está, esa aserción se cubre
   con un agente que camina por autonomía.
-- **US3 (P3)**: dominio T062–T065 (Codex); web T067–T070 tras T066.
+- **US3 (P3)**: dominio T062–T065; web T067–T070 tras T065.
 - **US4 (P4)**: necesita T010 (validación de borradores) y T037 (formas); no depende de la simulación
   salvo para el escenario US4-8.
-- **US5 (P5)**: necesita T078 (órdenes) integradas en T066.
+- **US5 (P5)**: dominio T077–T078; web T079–T084 tras T078.
 
-### Codex: contenido de cada tanda
+### Codex: un único bundle
 
-- **Tanda 1** (worktree desde `002-marketing-team`, rama `codex/tanda-1`): T003–T015.
-- **Tanda 2** (worktree desde `002-marketing-team` con la Tanda 1 integrada, rama `codex/tanda-2`):
-  T023–T030, T049–T050, T062–T065, T077–T078 en ese orden. Se puede entregar en dos bundles
-  (núcleo T023–T030 → T035; resto → T066) para desbloquear antes el store.
+- Worktree desde `002-marketing-team`, rama `codex/domain`: T013–T014 (máquina de estados, 36 pares),
+  T023–T024 (PRNG), T049–T050 (selección), en ese orden, con commits `test:`/`feat:` separados. Bundle
+  en `/tmp/codex-domain.bundle`; se integra en T016.
+- Además, una sola revisión en solo lectura del diff final (T090). El segundo análisis tras
+  `/speckit-analyze` lo hace solo Claude.
 
 ### Within Each User Story
 
@@ -268,8 +269,8 @@ libre muestra el aviso; desactivar depuración devuelve la autonomía.
 
 ### Parallel Opportunities
 
-- Codex (Tanda 1) ∥ Claude (T001, T017–T022, T036–T040, T046, T051–T053, T058, T071).
-- Codex (Tanda 2) ∥ Claude (T031–T034 tras T002, T041–T047, T054–T060, T067–T069, T072–T076).
+- Codex (T013–T014, T023–T024, T049–T050) ∥ Claude (T001, T003–T012, T017–T022, T036–T040).
+- Claude, sin dependencias entre sí: T046, T051–T053, T058, T071.
 - Polish: T085, T086, T087.
 
 ---
@@ -277,12 +278,11 @@ libre muestra el aviso; desactivar depuración devuelve la autonomía.
 ## Parallel Example: Claude + Codex
 
 ```bash
-# Codex (codex exec -s workspace-write en ../ai-hq-codex-t1): solo packages/domain/src/agents
-Task: "T003 types" → "T004–T005 catalog" → "T006–T007 prompt" → "T008–T010 validate"
-      → "T011–T012 seed" → "T013–T014 stateMachine" → "T015 exports + bundle"
+# Codex (codex exec -m gpt-6.2-sol -s workspace-write en ../ai-hq-codex-domain)
+Task: "T013–T014 stateMachine" → "T023–T024 rng" → "T049–T050 selection" → bundle
 
 # Claude, a la vez, en el checkout principal
-Task: "T001 dialog stub" → "T017–T022 scene geometry" → "T036–T040 character shapes, Pixi, bubbles"
+Task: "T001 dialog stub" → "T003–T012 types, catalog, prompt, validate, seed" → "T017–T022 geometry"
 ```
 
 ---
@@ -291,7 +291,7 @@ Task: "T001 dialog stub" → "T017–T022 scene geometry" → "T036–T040 chara
 
 ### MVP First (User Story 1 Only)
 
-1. Setup → Foundational (Tanda 1, geometría, Tanda 2 núcleo, store).
+1. Setup → Foundational (datos, geometría, núcleo de simulación, store; bundle de Codex en paralelo).
 2. US1 → **STOP and VALIDATE** con quickstart 1.
 
 ### Incremental Delivery
@@ -311,6 +311,6 @@ Task: "T001 dialog stub" → "T017–T022 scene geometry" → "T036–T040 chara
 
 - [P] = archivos distintos, sin dependencias pendientes.
 - Marca `[x]` en el mismo commit que deja la tarea en verde (AGENTS.md); las de Codex, en el merge de
-  su bundle.
+  su bundle (T016).
 - Si dejas una tarea a medias: línea `> WIP (<agente>): <estado>` debajo de ella.
 - Nunca desactivar ni borrar tests para pasar la suite sin aprobación del usuario.

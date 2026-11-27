@@ -30,7 +30,7 @@ pnpm --filter @ai-hq/web exec playwright test --project=perf --no-deps
 
 ## Comprobación manual (`pnpm dev`, http://localhost:5173)
 
-Semilla de aceptación: `ACCEPTANCE_SEED` = **(se fija al implementar la Tanda 2 y se anota aquí)**.
+Semilla de aceptación: `ACCEPTANCE_SEED` = **(se fija en T065 y se anota aquí en T066)**.
 Abrir `http://localhost:5173/?seed=<ACCEPTANCE_SEED>`.
 
 1. **US1**: aparecen 6 personajes en los escritorios 1–6, sin burbuja, con colores distintos que

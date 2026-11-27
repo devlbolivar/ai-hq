@@ -10,11 +10,13 @@ Bloques y responsables (research R1):
 
 | Bloque | Archivos | Responsable |
 |---|---|---|
-| Tanda 1 | `agents/types.ts`, `agents/catalog.ts`, `agents/seed.ts`, `agents/prompt.ts`, `agents/validate.ts`, `agents/stateMachine.ts` | Codex |
-| Tanda 2 | `agents/rng.ts`, `agents/usePoints.ts`, `agents/movement.ts`, `agents/autonomy.ts`, `agents/orders.ts`, `agents/simulation.ts`, `agents/selection.ts` | Codex |
+| Datos y estados | `agents/types.ts`, `agents/catalog.ts`, `agents/seed.ts`, `agents/prompt.ts`, `agents/validate.ts` | Claude |
+| | `agents/stateMachine.ts` | Codex |
+| Simulación | `agents/usePoints.ts`, `agents/movement.ts`, `agents/autonomy.ts`, `agents/orders.ts`, `agents/simulation.ts` | Claude |
+| | `agents/rng.ts`, `agents/selection.ts` | Codex |
 | Geometría | `scene/sceneOrder.ts`, `scene/characterHit.ts` (incluye `positionToWorld`), `camera/follow.ts` | Claude |
 
-## Tanda 1
+## Datos, validación y máquina de estados
 
 ### Tipos y catálogo (`agents/types.ts`, `agents/catalog.ts`)
 
@@ -147,7 +149,7 @@ function transition(from: AgentStatus, trigger: TransitionTrigger): TransitionRe
   `NOT_ARRIVED`). El tipo de par se comprueba antes que la condición.
 - Tests: los 36 pares (origen, destino) según research R2 (SC-003).
 
-## Tanda 2
+## Simulación, autonomía, órdenes y selección
 
 ### PRNG (`agents/rng.ts`)
 
@@ -345,5 +347,5 @@ function centerOn(camera: Camera, worldPoint: Point, viewport: Viewport, layout:
 - `sceneHitTest` recorre `sceneOrder` al revés: objetos con su silueta de la 001, personajes con
   `characterSilhouette`; luego suelo; luego `null`.
 - `positionToWorld` equivale a `tileCenter` de la 001 con coordenadas fraccionales; la usan dibujo,
-  silueta, hit-test y seguimiento de cámara. `GridPosition` se define en `agents/types.ts` (Tanda 1).
+  silueta, hit-test y seguimiento de cámara. `GridPosition` se define en `agents/types.ts`.
 - `centerOn` conserva el zoom y aplica el límite de cámara de la 001 (FR-028).

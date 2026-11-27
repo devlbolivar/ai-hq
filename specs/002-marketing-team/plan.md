@@ -12,8 +12,8 @@ determinista por pasos fijos de 10 ms con movimiento sobre `findPath`, reservas 
 autonomía con semilla y órdenes externas; selección con cámara que sigue; personajes, anillo y
 burbujas dibujados por código e intercalados en profundidad con los muebles; panel de equipo, panel
 del agente con órdenes de depuración y editor modal. Toda la lógica vive en `packages/domain`
-(dividida en dos tandas delegables a Codex con la API fijada en
-[contracts/domain-api.md](./contracts/domain-api.md)); `apps/web` integra store, render, entrada y UI.
+(con la API fijada en [contracts/domain-api.md](./contracts/domain-api.md); Codex implementa solo la
+máquina de estados, el PRNG y la selección); `apps/web` integra store, render, entrada y UI.
 Sin dependencias nuevas.
 
 ## Technical Context
@@ -139,34 +139,29 @@ apps/web/
 
 ## Enfoque de implementación (orden TDD sugerido para `/speckit-tasks`)
 
-Reparto (research R1): **Codex** implementa en worktrees las Tandas 1 y 2 del dominio con la API de
-[contracts/domain-api.md](./contracts/domain-api.md); **Claude** hace la geometría de escena, el store,
-el render Pixi (personajes, anillo, burbujas, profundidad), las animaciones, la UI, la integración y los
-e2e. Las tareas de Codex se marcan "(Codex)" y no tocan archivos de la web ni `tasks.md`.
+Reparto (research R1): por cuota limitada, **Codex** (`gpt-6.2-sol`, esfuerzo `medium`) implementa en
+un worktree solo tres módulos puros del dominio —máquina de estados (36 pares), PRNG y selección—, en un
+único bundle, y hace una revisión final en solo lectura. **Claude** hace el resto del dominio, la
+geometría de escena, el store, el render Pixi (personajes, anillo, burbujas, profundidad), las
+animaciones, la UI, la integración y los e2e. Las tareas de Codex se marcan "(Codex)" y no tocan
+archivos de la web, `tasks.md`, `index.ts` ni `exports.test.ts`.
 
-1. **Preparación** (Claude): stub de `showModal` en el setup de tests de la web. Los archivos y
-   exportaciones de cada tanda los crea Codex en su propio worktree.
-2. **Tanda 1 (Codex)** — catálogo → semilla → prompt efectivo → validación → máquina de estados
-   (36 pares). En paralelo, **Claude**: `characterShapes` + renderizadores Pixi/SVG con un perfil de
-   prueba local, `drawRing`, `drawBubble`, `follow.ts` (web), `centerOn`, `sceneOrder` y
-   `sceneHitTest` (con una `CharacterPlacement` que no depende de la Tanda 2).
-3. **Integración Tanda 1** (Claude): merge del bundle; `TeamPanel` y `AgentEditor` sobre
-   `marketingTeam`, `validateAgentDraft` y `effectivePrompt`.
+1. **Preparación** (Claude): stub de `showModal` en el setup de tests de la web.
+2. **Bundle de Codex** (máquina de estados → PRNG → selección), en paralelo con **Claude**: tipos,
+   catálogo, prompt efectivo, validación, semilla, y geometría (`sceneOrder`, `sceneHitTest`,
+   `positionToWorld`).
+3. **Integración del bundle** (Claude): merge y exportaciones.
 4. **Merge de `main`** (con el fix de la 001) en `002-marketing-team` cuando el PR del fix entre;
    requisito para tocar `store.ts`, `mouse.ts`, `keyboard.ts`, `OfficeCanvas.tsx`, `testHook.ts`,
    `HoverLabel.tsx` y `e2e/scene.spec.ts` (research R15).
-5. **Tanda 2 (Codex)** — PRNG → puntos de uso → movimiento → autonomía → órdenes → simulación (con
-   `ACCEPTANCE_SEED`, SC-005, SC-006) → selección. En paralelo, **Claude**: store con `team`,
-   `selection`, `editor`, `paused`, hover de agentes sobre posiciones fijas; teclado y ratón;
-   personajes estáticos en sus escritorios (US1 sin movimiento).
-6. **Integración Tanda 2** (Claude): `sim` en el store y en el ticker de Pixi, animaciones por estado,
-   burbujas, seguimiento de cámara, órdenes de depuración, aviso, hook ampliado.
+5. **Núcleo de simulación** (Claude): puntos de uso → movimiento → simulación; store con `sim`.
+6. **Historias** (Claude): US1 personajes y panel → US2 selección y cámara → US3 autonomía (con
+   `ACCEPTANCE_SEED`, SC-005, SC-006), animaciones y pausa → US4 editor → US5 órdenes de depuración.
 7. **E2E** por historia (US1→US5) y perf smoke ampliado (FR-035).
 8. **Revisión de Codex** en solo lectura de `git diff main...HEAD`, quality gate completo,
    `validation.md` para la validación manual.
 
-US1 (personajes estáticos y panel) se puede entregar tras el paso 5 sin simulación; US2 y US4 no
-dependen de la autonomía; US3 y US5 dependen de la Tanda 2.
+US2 y US4 no dependen de la autonomía; US3 y US5 dependen de la autonomía y de las órdenes.
 
 ## Complexity Tracking
 

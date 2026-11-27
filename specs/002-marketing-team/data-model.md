@@ -98,7 +98,7 @@ válido), con las mismas reglas que la carga comparando con el resto del equipo 
 `NOT_ON_FREE_USE_POINT` (`start-activity` con `onFreeUsePoint: false`), `NOT_ARRIVED` (`arrive` con
 `atTarget: false`). Tabla exacta en FR-008; cobertura de los 36 pares en research R2.
 
-## Simulación (`agents/simulation.ts` y módulos de la Tanda 2)
+## Simulación (`agents/simulation.ts` y módulos relacionados)
 
 ### Constantes
 
