@@ -131,6 +131,15 @@ describe('validateLayout (FR-008, FR-009b)', () => {
     expect(e.tile).toEqual({ x: 15, y: 1 });
   });
 
+  it.each(['meeting-table', 'coffee-machine', 'sofa', 'whiteboard'])(
+    'requires at least one use point for %s',
+    (kind) => {
+      const obj = marketingLayout.objects.find((o) => o.kind === kind)!;
+      const layout = patchObject(marketingLayout, obj.id, (o) => ({ ...o, usePoints: [] }));
+      expect(only(layout, 'MISSING_USE_POINT').objectId).toBe(obj.id);
+    },
+  );
+
   it('MISSING_NETWORK: screen without network', () => {
     const layout = patchObject(marketingLayout, 'screen-x', ({ network: _n, ...rest }) => rest);
     expect(only(layout, 'MISSING_NETWORK').objectId).toBe('screen-x');
