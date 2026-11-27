@@ -334,6 +334,25 @@ describe('attachMouse', () => {
     expect(actions.zoomAt).toHaveBeenCalledTimes(1);
   });
 
+  it.each([false, true])('discards a cancelled debug gesture (dragging: %s)', (dragging) => {
+    const host = canvas();
+    const actions = makeActions({ debug: true });
+    const detach = attachMouse(host, createMouseInput(actions, host));
+    const at = screenOf({ x: 8, y: 11 });
+    const point = { clientX: at.x, clientY: at.y };
+    try {
+      fire(host, 'pointerdown', point);
+      if (dragging) fire(host, 'pointermove', { ...point, clientX: at.x + 10 });
+      fire(host, 'pointercancel', point);
+      fire(host, 'pointermove', { ...point, clientX: at.x + 20 });
+      fire(host, 'pointerup', point);
+      expect(actions.selectTile).not.toHaveBeenCalled();
+      expect(actions.panBy).toHaveBeenCalledTimes(dragging ? 1 : 0);
+    } finally {
+      detach();
+    }
+  });
+
   it('a click (host pointerdown, window pointerup) picks a tile in debug mode', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
