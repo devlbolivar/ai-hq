@@ -1,11 +1,20 @@
 import { expect, type Page } from '@playwright/test';
-import type { Camera, Coord, HoverTarget, Point, Viewport } from '@ai-hq/domain';
+import type { Camera, Coord, HoverTarget, PathResult, Point, Viewport } from '@ai-hq/domain';
+
+/** Debug-mode state exposed by the hook (US4). */
+export interface DebugSnapshot {
+  enabled: boolean;
+  from: Coord | null;
+  to: Coord | null;
+  result: PathResult | null;
+}
 
 /** Subset of `window.__AIHQ__` (contracts/ui-contract.md) used by the e2e tests. */
 interface SceneHook {
   ready: boolean;
   camera: Camera;
   hover: HoverTarget;
+  debug: DebugSnapshot;
   gridToScreen(tile: Coord): Point;
 }
 
@@ -33,6 +42,13 @@ export function readHover(page: Page): Promise<HoverTarget> {
   return page.evaluate(() => {
     const { hover } = (window as unknown as { __AIHQ__: SceneHook }).__AIHQ__;
     return hover === null ? null : JSON.parse(JSON.stringify(hover));
+  });
+}
+
+export function readDebug(page: Page): Promise<DebugSnapshot> {
+  return page.evaluate(() => {
+    const { debug } = (window as unknown as { __AIHQ__: SceneHook }).__AIHQ__;
+    return JSON.parse(JSON.stringify(debug)) as DebugSnapshot;
   });
 }
 
