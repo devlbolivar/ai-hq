@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import contract from '../../../specs/001-office-engine/contracts/domain-api.md?raw';
+import contract002Raw from '../../../specs/002-marketing-team/contracts/domain-api.md?raw';
 import * as domain from '../src/index';
 
 function typescriptBlocks(markdown: string): string {
@@ -74,5 +75,28 @@ describe('public API documented in domain-api.md', () => {
     const { entrance } = domain.marketingLayout;
     const walk = domain.walkability(domain.marketingLayout);
     expect(domain.findPath(walk, entrance, entrance)).toEqual({ ok: true, path: [entrance] });
+  });
+});
+
+describe('contracts/domain-api.md of the 002 (T086)', () => {
+  const contract002 = typescriptBlocks(contract002Raw);
+  const functions002 = namesIn(contract002, /^function (\w+)/gm);
+  const constants002 = Array.from(contract002.matchAll(/^const (.+)$/gm), (m) => m[1]!)
+    .map((line) => line.replace(/\/\/.*$/, ''))
+    .flatMap((line) => line.split(','))
+    .map((part) => part.trim().split(/[\s:=]/)[0]!)
+    .filter((name) => /^[A-Za-z_]\w*$/.test(name));
+
+  it('lists functions and constants', () => {
+    expect(functions002.length).toBeGreaterThan(30);
+    expect(constants002).toContain('ACCEPTANCE_SEED');
+  });
+
+  it.each(functions002)('exports the function %s', (name) => {
+    expect(typeof api[name]).toBe('function');
+  });
+
+  it.each(constants002)('exports the constant %s', (name) => {
+    expect(api).toHaveProperty(name);
   });
 });
