@@ -1,6 +1,7 @@
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import {
+  findPath,
   hitTest,
   initialCamera,
   marketingLayout,
@@ -8,13 +9,31 @@ import {
   recenter,
   screenToWorld,
   validateLayout,
+  walkability,
   zoomAt,
   type Camera,
+  type Coord,
   type HoverTarget,
   type OfficeLayout,
+  type PathResult,
   type Point,
   type Viewport,
 } from '@ai-hq/domain';
+
+/** Debug mode (US4, FR-023): origin and destination picked with clicks, and the route between them. */
+export interface DebugState {
+  readonly enabled: boolean;
+  readonly from: Coord | null;
+  readonly to: Coord | null;
+  readonly result: PathResult | null;
+}
+
+export const IDLE_DEBUG: DebugState = Object.freeze({
+  enabled: false,
+  from: null,
+  to: null,
+  result: null,
+});
 
 export interface OfficeState {
   readonly layout: OfficeLayout;
@@ -26,6 +45,7 @@ export interface OfficeState {
   readonly hover: HoverTarget;
   /** Last pointer position relative to the canvas host; null while the pointer is outside. */
   readonly pointer: Point | null;
+  readonly debug: DebugState;
   setViewport(viewport: Viewport): void;
   /** Pans by a screen-pixel delta (clamped by the domain, FR-016). */
   panBy(delta: Point): void;
@@ -37,6 +57,13 @@ export interface OfficeState {
   pointerMove(screenPoint: Point): void;
   /** The pointer left the canvas: no hover. */
   pointerLeave(): void;
+  /** Turns debug mode on (no selection yet) or off (clears origin, destination and route). */
+  toggleDebug(): void;
+  /**
+   * Picks a tile in debug mode: first the origin, then the destination (computing the route), and
+   * the next pick starts over with a new origin. Ignored while debug mode is off.
+   */
+  selectTile(tile: Coord): void;
 }
 
 function sameHover(a: HoverTarget, b: HoverTarget): boolean {
@@ -73,6 +100,16 @@ export function createOfficeStore({ viewport, layout = marketingLayout }: Office
     throw new Error(`Layout inválido "${layout.departmentId}":\n${details}`);
   }
 
+  const walk = walkability(layout);
+
+  const nextDebug = (debug: DebugState, tile: Coord): DebugState => {
+    const picked = { x: tile.x, y: tile.y };
+    if (debug.from === null || debug.to !== null) {
+      return { enabled: true, from: picked, to: null, result: null };
+    }
+    return { ...debug, to: picked, result: findPath(walk, debug.from, picked) };
+  };
+
   return createStore<OfficeState>()((set) => ({
     layout,
     viewport,
@@ -80,6 +117,7 @@ export function createOfficeStore({ viewport, layout = marketingLayout }: Office
     cameraTouched: false,
     hover: null,
     pointer: null,
+    debug: IDLE_DEBUG,
     setViewport: (next) =>
       set((state) => ({
         viewport: next,
@@ -111,6 +149,12 @@ export function createOfficeStore({ viewport, layout = marketingLayout }: Office
         hover: hoverAt(screenPoint, state.camera, state.layout, state.hover),
       })),
     pointerLeave: () => set({ pointer: null, hover: null }),
+    toggleDebug: () =>
+      set((state) => ({
+        debug: state.debug.enabled ? IDLE_DEBUG : { ...IDLE_DEBUG, enabled: true },
+      })),
+    selectTile: (tile) =>
+      set((state) => (state.debug.enabled ? { debug: nextDebug(state.debug, tile) } : state)),
   }));
 }
 

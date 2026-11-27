@@ -4,10 +4,9 @@ import {
   type Camera,
   type Coord,
   type HoverTarget,
-  type PathResult,
   type Point,
 } from '@ai-hq/domain';
-import type { OfficeStore } from './state/store';
+import type { DebugState, OfficeStore } from './state/store';
 
 /** Read-only scene snapshot for e2e tests (contracts/ui-contract.md). */
 export interface AIHQTestHook {
@@ -16,12 +15,7 @@ export interface AIHQTestHook {
   readonly drawOrder: readonly string[];
   readonly camera: Camera;
   readonly hover: HoverTarget;
-  readonly debug: {
-    readonly enabled: boolean;
-    readonly from: Coord | null;
-    readonly to: Coord | null;
-    readonly result: PathResult | null;
-  };
+  readonly debug: DebugState;
   readonly fps: number;
   /** Screen position of the tile **center** (never the top vertex shared by 4 tiles). */
   gridToScreen(tile: Coord): Point;
@@ -47,7 +41,6 @@ export interface TestHookControls {
 }
 
 const FPS_WINDOW_MS = 1000;
-const IDLE_DEBUG = Object.freeze({ enabled: false, from: null, to: null, result: null });
 
 export function shouldExposeTestHook(env: TestHookEnv): boolean {
   return env.MODE !== 'production' || env.VITE_E2E === '1';
@@ -81,9 +74,8 @@ export function installTestHook(
     get hover(): HoverTarget {
       return store.getState().hover;
     },
-    // Debug (US4) is wired into the store in a later phase.
-    get debug() {
-      return IDLE_DEBUG;
+    get debug(): DebugState {
+      return store.getState().debug;
     },
     get fps() {
       return frames.length;
