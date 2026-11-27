@@ -3,9 +3,13 @@ import { useStore } from 'zustand';
 import {
   initialCamera,
   marketingLayout,
+  pan,
+  recenter,
   validateLayout,
+  zoomAt,
   type Camera,
   type OfficeLayout,
+  type Point,
   type Viewport,
 } from '@ai-hq/domain';
 
@@ -16,6 +20,12 @@ export interface OfficeState {
   /** True once the user has panned or zoomed; until then resizes keep the office centered. */
   readonly cameraTouched: boolean;
   setViewport(viewport: Viewport): void;
+  /** Pans by a screen-pixel delta (clamped by the domain, FR-016). */
+  panBy(delta: Point): void;
+  /** Zooms by `factor` keeping the world point under the screen `anchor` fixed (FR-014). */
+  zoomAt(anchor: Point, factor: number): void;
+  /** Back to the initial camera; resizes keep it centered again (FR-015). */
+  recenter(): void;
 }
 
 export interface OfficeStoreOptions {
@@ -38,9 +48,21 @@ export function createOfficeStore({ viewport, layout = marketingLayout }: Office
     setViewport: (next) =>
       set((state) =>
         state.cameraTouched
-          ? { viewport: next }
+          ? { viewport: next, camera: pan(state.camera, { x: 0, y: 0 }, next, state.layout) }
           : { viewport: next, camera: initialCamera(next, state.layout) },
       ),
+    panBy: (delta) =>
+      set((state) => ({
+        camera: pan(state.camera, delta, state.viewport, state.layout),
+        cameraTouched: true,
+      })),
+    zoomAt: (anchor, factor) =>
+      set((state) => ({
+        camera: zoomAt(state.camera, anchor, factor, state.viewport, state.layout),
+        cameraTouched: true,
+      })),
+    recenter: () =>
+      set((state) => ({ camera: recenter(state.viewport, state.layout), cameraTouched: false })),
   }));
 }
 
