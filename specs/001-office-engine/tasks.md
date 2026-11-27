@@ -107,9 +107,8 @@ objetos del layout en el orden de `drawOrder()` del dominio, cámara a 1x centra
 
 - [ ] T038 [P] [US2] RED: e2e `apps/web/e2e/camera.spec.ts` — drag moves `camera.offset`; wheel-in over `desk-1` (via `gridToScreen`) keeps it under the cursor; zoom clamps at 2 and 0.5; "Recentrar" restores the initial camera; dragging far keeps the office center inside the viewport; a drag starting on the button does not pan (FR-013–FR-016)
 - [ ] T039 [P] [US2] RED: e2e `apps/web/e2e/keyboard.spec.ts` — arrows and WASD pan; `+`/`=` and `-` zoom centered on screen within limits; `0` recenters; keys are ignored while an injected `<input>` has focus (FR-016a)
-- [ ] T040 [P] [US2] RED: camera ops tests in `packages/domain/test/camera/ops.test.ts` — `pan` adds delta; `zoomAt` keeps the anchor's world point; zoom clamped to `ZOOM_MIN`/`ZOOM_MAX` (data-model.md `Camera.zoom`); `ZOOM_STEP` 1.1; `recenter` equals `initialCamera`; every op keeps the office center inside the viewport (research R6, FR-016)
-- [ ] T041 [US2] GREEN: implement `pan`, `zoomAt`, `recenter`, camera clamping and constants in `packages/domain/src/camera/ops.ts`; export from `packages/domain/src/index.ts`
-  > WIP (codex): T040–T041 in progress in worktree `../ai-hq-codex`, branch `001-office-engine-codex`; merge it into `001-office-engine` when done.
+- [x] T040 [P] [US2] RED: camera ops tests in `packages/domain/test/camera/ops.test.ts` — `pan` adds delta; `zoomAt` keeps the anchor's world point; zoom clamped to `ZOOM_MIN`/`ZOOM_MAX` (data-model.md `Camera.zoom`); `ZOOM_STEP` 1.1; `recenter` equals `initialCamera`; every op keeps the office center inside the viewport (research R6, FR-016)
+- [x] T041 [US2] GREEN: implement `pan`, `zoomAt`, `recenter`, camera clamping and constants in `packages/domain/src/camera/ops.ts`; export from `packages/domain/src/index.ts`
 - [ ] T042 [US2] RED: store camera action tests in `apps/web/test/state/camera-actions.test.ts` — `panBy`, `zoomAt`, `recenter` delegate to the domain; `setViewport` clamps the current camera
 - [ ] T043 [US2] GREEN: add camera actions to `apps/web/src/state/store.ts`
 - [ ] T044 [P] [US2] RED: mouse input tests in `apps/web/test/input/mouse.test.ts` — primary button only; < 4 px is not a drag; gestures starting on `[data-ui-control]` are ignored; wheel calls `zoomAt` at the cursor with one `ZOOM_STEP` per notch
@@ -152,9 +151,8 @@ objetos del layout en el orden de `drawOrder()` del dominio, cámara a 1x centra
 sobre un escritorio → "Sin ruta"; desactivar limpia todo (quickstart 8–9).
 
 - [ ] T059 [P] [US4] RED: e2e `apps/web/e2e/debug.spec.ts` — `G` toggles `debug.enabled`; click entrance `(8,11)` then chair of desk-4 `(3,9)` → `result.ok` with the minimal step count and status "Ruta: N pasos"; destination on a desk → "Sin ruta"; toggling off clears `from`, `to`, `result` (FR-021, FR-023, US4 escenario 6)
-- [ ] T060 [P] [US4] RED: path tests in `packages/domain/test/path/findPath.test.ts` — straight path; wall detour with minimal length; blocked destination → `reason 'blocked'`; enclosed destination → `'unreachable'`; outside grid → `'out-of-bounds'`; `from = to` → single-tile path; every step is 4-neighbor adjacent; identical result over 100 calls; tie-break order N, E, S, W (data-model.md `PathResult`, research R7, FR-022)
-- [ ] T061 [US4] GREEN: implement `findPath` in `packages/domain/src/path/findPath.ts`; export from `packages/domain/src/index.ts`
-  > WIP (codex): T060–T061 in progress in worktree `../ai-hq-codex`, branch `001-office-engine-codex`; merge it into `001-office-engine` when done.
+- [x] T060 [P] [US4] RED: path tests in `packages/domain/test/path/findPath.test.ts` — straight path; wall detour with minimal length; blocked destination → `reason 'blocked'`; enclosed destination → `'unreachable'`; outside grid → `'out-of-bounds'`; `from = to` → single-tile path; every step is 4-neighbor adjacent; identical result over 100 calls; tie-break order N, E, S, W (data-model.md `PathResult`, research R7, FR-022)
+- [x] T061 [US4] GREEN: implement `findPath` in `packages/domain/src/path/findPath.ts`; export from `packages/domain/src/index.ts`
 - [ ] T062 [US4] RED: store debug tests in `apps/web/test/state/debug.test.ts` — transitions per data-model.md "Estado de UI" (`debug.enabled`, `debug.from`, `debug.to`, `debug.result`): toggle, first click = from, second = to + result, third restarts, disabling clears
 - [ ] T063 [US4] GREEN: add the `debug` slice to `apps/web/src/state/store.ts`
 - [ ] T064 [P] [US4] RED: `apps/web/test/ui/DebugToggle.test.tsx` (role `switch` named "Modo depuración") and `apps/web/test/ui/PathStatus.test.tsx` ("Ruta: N pasos" / "Sin ruta", hidden without result)
