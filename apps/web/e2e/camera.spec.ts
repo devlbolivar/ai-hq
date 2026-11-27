@@ -82,9 +82,7 @@ test.describe('US2 — navegar con ratón (FR-013–FR-016)', () => {
     await expect.poll(async () => (await readCamera(page)).zoom).not.toBe(1);
 
     await page.getByRole('button', { name: 'Recentrar' }).click();
-    await expect
-      .poll(async () => (await readCamera(page)).zoom, { timeout: 2000 })
-      .toBe(1);
+    await expect.poll(async () => (await readCamera(page)).zoom, { timeout: 2000 }).toBe(1);
     expectCameraClose(await readCamera(page), initialCamera(viewport, marketingLayout));
   });
 

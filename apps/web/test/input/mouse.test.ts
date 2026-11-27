@@ -97,7 +97,10 @@ describe('mouse input — wheel zoom (FR-014)', () => {
     const actions = makeActions();
     const mouse = createMouseInput(actions);
     mouse.handleWheel(wheel(10, 20, 100));
-    expect(actions.zoomAt).toHaveBeenLastCalledWith({ x: 10, y: 20 }, expect.closeTo(1 / ZOOM_STEP, 10));
+    expect(actions.zoomAt).toHaveBeenLastCalledWith(
+      { x: 10, y: 20 },
+      expect.closeTo(1 / ZOOM_STEP, 10),
+    );
     mouse.handleWheel(wheel(10, 20, -200));
     expect(actions.zoomAt).toHaveBeenLastCalledWith(
       { x: 10, y: 20 },

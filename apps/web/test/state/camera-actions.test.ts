@@ -9,7 +9,9 @@ describe('office store camera actions (FR-013–FR-016)', () => {
     const store = createOfficeStore({ viewport });
     const start = store.getState().camera;
     store.getState().panBy({ x: 40, y: -25 });
-    expect(store.getState().camera).toEqual(pan(start, { x: 40, y: -25 }, viewport, marketingLayout));
+    expect(store.getState().camera).toEqual(
+      pan(start, { x: 40, y: -25 }, viewport, marketingLayout),
+    );
     expect(store.getState().cameraTouched).toBe(true);
   });
 
