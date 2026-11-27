@@ -23,18 +23,17 @@ export const KEY_PAN_SPEED = 600;
 
 const PAN_KEYS = new Set(['arrowup', 'w', 'arrowdown', 's', 'arrowleft', 'a', 'arrowright', 'd']);
 
+function isEditable(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('input, textarea, select, [contenteditable]') !== null;
+}
+
 export function createKeyboardInput(actions: KeyboardCameraActions): KeyboardInput {
   const held = new Set<string>();
 
   return {
     handleKeyDown(event) {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
-      if (
-        event.target instanceof Element &&
-        event.target.closest('input, textarea, select, [contenteditable]')
-      ) {
-        return;
-      }
+      if (isEditable(event.target)) return;
 
       const key = event.key.toLowerCase();
       if (PAN_KEYS.has(key)) {
@@ -74,11 +73,16 @@ export function createKeyboardInput(actions: KeyboardCameraActions): KeyboardInp
 /** Wire keyboard and blur listeners to the window and return a detach function. */
 export function attachKeyboard(target: Window, input: KeyboardInput): () => void {
   const { handleKeyDown, handleKeyUp, releaseAll } = input;
+  const onFocusIn = (event: FocusEvent) => {
+    if (isEditable(event.target)) releaseAll();
+  };
+  target.addEventListener('focusin', onFocusIn);
   target.addEventListener('keydown', handleKeyDown);
   target.addEventListener('keyup', handleKeyUp);
   target.addEventListener('blur', releaseAll);
 
   return () => {
+    target.removeEventListener('focusin', onFocusIn);
     target.removeEventListener('keydown', handleKeyDown);
     target.removeEventListener('keyup', handleKeyUp);
     target.removeEventListener('blur', releaseAll);
