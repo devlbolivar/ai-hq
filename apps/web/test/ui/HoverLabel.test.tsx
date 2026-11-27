@@ -31,10 +31,10 @@ describe('HoverLabel', () => {
 
   it('updates the object name and removes the status when hover clears', () => {
     const store = renderLabel({ type: 'object', id: 'meeting-table' });
-    expect(screen.getByRole('status').textContent).toBe('Mesa de reuniones');
+    expect(screen.getByRole('status', { name: 'Mesa de reuniones' }).textContent).toBe('Mesa de reuniones');
 
     act(() => store.setState({ hover: { type: 'object', id: 'plant-2' } }));
-    expect(screen.getByRole('status').textContent).toBe('Planta');
+    expect(screen.getByRole('status', { name: 'Planta' }).textContent).toBe('Planta');
 
     act(() => store.setState({ hover: null }));
     expect(screen.queryByRole('status')).toBeNull();
