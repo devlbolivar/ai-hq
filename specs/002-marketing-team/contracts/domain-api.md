@@ -253,7 +253,7 @@ type OrderResult =
   | { ok: false; reason: 'NO_FREE_SPOT' | 'UNREACHABLE' | 'INVALID_DESTINATION' | 'UNKNOWN_AGENT' }
 function applyOrder(sim: Simulation, world: SimWorld, agentId: string, order: Order):
   { sim: Simulation; result: OrderResult }
-function cancelForcedOrders(sim: Simulation): Simulation
+function cancelForcedOrders(sim: Simulation, world: SimWorld): Simulation
 ```
 
 - Orden aceptada: interrumpe al instante la actividad autónoma (sin celebrar), marca `forced`, libera la
