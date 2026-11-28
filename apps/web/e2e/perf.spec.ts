@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { openOffice, viewportOf } from './support/hook';
+import { openOffice, readAgents, readSelection, viewportOf } from './support/hook';
 
 /** SC-003 smoke (research R10): headless is noisy, so the bar is 50 fps instead of 60. */
 const MIN_FPS = 50;
@@ -32,6 +32,9 @@ async function interact(page: Page, round: number): Promise<void> {
 }
 
 test.describe('SC-003 — rendimiento (smoke headless)', () => {
+  // One at a time: two frame-rate measurements must not share the GPU.
+  test.describe.configure({ mode: 'serial' });
+
   test(`5 s of pan, zoom and hover keep the frame rate at ${MIN_FPS} fps or more`, async ({
     page,
   }) => {
@@ -53,6 +56,43 @@ test.describe('SC-003 — rendimiento (smoke headless)', () => {
     console.log('fps samples', samples.join(', '));
     test.info().annotations.push({ type: 'fps', description: samples.join(', ') });
     expect(samples.length).toBeGreaterThanOrEqual(4);
+    expect(Math.min(...samples)).toBeGreaterThanOrEqual(MIN_FPS);
+  });
+
+  test(`6 agents walking with the camera following one keep ${MIN_FPS} fps for 10 s (FR-035)`, async ({
+    page,
+  }) => {
+    test.setTimeout(40_000);
+    await openOffice(page);
+    await page.evaluate(() =>
+      (
+        window as unknown as { __AIHQ__: { test: { patrol(on: boolean): void } } }
+      ).__AIHQ__.test.patrol(true),
+    );
+    await page.keyboard.press('1');
+    await expect
+      .poll(() => readSelection(page))
+      .toEqual({
+        agentId: 'head-of-marketing',
+        following: true,
+      });
+    // `fps` counts the last second: let one full second of walking pass first.
+    await page.waitForTimeout(WARM_UP_MS);
+
+    const samples: number[] = [];
+    for (let i = 0; i < 10; i++) {
+      await page.waitForTimeout(1000);
+      const [fps, agents] = await Promise.all([readFps(page), readAgents(page)]);
+      samples.push(fps);
+      expect(
+        agents.filter((a) => a.status !== 'walking').map((a) => a.id),
+        `sample ${i + 1}`,
+      ).toEqual([]);
+    }
+
+    console.log('fps samples (6 walking)', samples.join(', '));
+    test.info().annotations.push({ type: 'fps', description: samples.join(', ') });
+    expect((await readSelection(page)).following).toBe(true);
     expect(Math.min(...samples)).toBeGreaterThanOrEqual(MIN_FPS);
   });
 });
