@@ -237,7 +237,7 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
         app.ticker.add((ticker: Ticker) => store.getState().tick(ticker.deltaMS));
         app.ticker.add(() => hook?.recordFrame(performance.now()));
         app.render();
-        hook?.markReady(scene.objects.children.filter((c) => !c.label.startsWith('agent:')));
+        hook?.markReady(scene.objects);
       })
       .catch((error: unknown) => {
         console.error('No se pudo iniciar el render de la oficina', error);

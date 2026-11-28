@@ -1,9 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { findPath, marketingLayout, walkability, type Coord } from '@ai-hq/domain';
-import { gridToScreen, openOffice, readDebug, type DebugSnapshot } from './support/hook';
+import { floorPointOf, openOffice, readDebug, type DebugSnapshot } from './support/hook';
 
 const entrance = marketingLayout.entrance;
-/** Chair of desk-4, where its worker sits (quickstart 8). */
+/** Chair of desk-4, where its worker sits (quickstart 8); the agent on it is clicked around. */
 const desk4Chair: Coord = { x: 3, y: 9 };
 
 function originOf(id: string): Coord {
@@ -28,8 +28,9 @@ async function expectDebug(page: Page, expected: Partial<DebugSnapshot>): Promis
     .toEqual(expected);
 }
 
+/** Clicks the lower half of the tile, below the feet of an agent on it, so the tile is picked. */
 async function clickTile(page: Page, tile: Coord): Promise<void> {
-  const at = await gridToScreen(page, tile);
+  const at = await floorPointOf(page, tile);
   await page.mouse.click(at.x, at.y);
 }
 
@@ -39,7 +40,8 @@ const pathStatus = (page: Page) =>
 
 test.describe('US4 — modo depuración y rutas (FR-021, FR-023)', () => {
   test.beforeEach(async ({ page }) => {
-    await openOffice(page);
+    // Paused: agents stay on their desks and never walk through the clicked tiles.
+    await openOffice(page, { paused: true });
   });
 
   test('G toggles debug mode and the switch reflects it', async ({ page }) => {
@@ -100,7 +102,7 @@ test.describe('US4 — modo depuración y rutas (FR-021, FR-023)', () => {
   test('a drag in debug mode pans without picking a tile', async ({ page }) => {
     await page.keyboard.press('g');
     await expectDebug(page, { enabled: true });
-    const at = await gridToScreen(page, { x: 9, y: 6 });
+    const at = await floorPointOf(page, { x: 9, y: 6 });
     await page.mouse.move(at.x, at.y);
     await page.mouse.down();
     await page.mouse.move(at.x + 60, at.y + 30, { steps: 5 });
