@@ -8,6 +8,7 @@ import {
   sceneOrder,
   ZOOM_MAX,
   type Camera,
+  type CharacterPlacement,
   type Point,
 } from '@ai-hq/domain';
 import { attachKeyboard, createKeyboardInput } from '../input/keyboard';
@@ -91,8 +92,12 @@ function buildScene(store: OfficeStore): Scene {
 }
 
 /** Depth order of objects and characters for the current positions (FR-023, research R10). */
-function sortScene(scene: Scene, state: OfficeState): void {
-  sceneOrder(state.layout, characterPlacements(state.sim)).forEach((item, i) => {
+function sortScene(
+  scene: Scene,
+  state: OfficeState,
+  placements: readonly CharacterPlacement[],
+): void {
+  sceneOrder(state.layout, placements).forEach((item, i) => {
     const view =
       item.type === 'object'
         ? scene.objectViews.get(item.id)
@@ -104,10 +109,14 @@ function sortScene(scene: Scene, state: OfficeState): void {
 }
 
 /** Places, animates and labels every character from the simulation (FR-024, FR-025). */
-function updateAgents(scene: Scene, state: OfficeState): void {
+function updateAgents(
+  scene: Scene,
+  state: OfficeState,
+  placements: readonly CharacterPlacement[],
+): void {
   const { layout, sim, selection } = state;
   const profiles = new Map(state.team.map((p) => [p.id, p]));
-  for (const placement of characterPlacements(sim)) {
+  for (const placement of placements) {
     const agent = sim.agents[placement.teamIndex];
     const profile = profiles.get(placement.id);
     const views = scene.agents.get(placement.id);
@@ -136,15 +145,18 @@ function updateAgents(scene: Scene, state: OfficeState): void {
   }
 }
 
-/** Mouse and keyboard drive the camera and hover through the store; returns a detach function. */
+/**
+ * Mouse and keyboard drive the camera, hover, selection, pause and debug mode through the store,
+ * and do nothing while the editor is open; returns a detach function.
+ */
 function attachInput(app: Application, host: HTMLElement, store: OfficeStore): () => void {
   const camera = {
     panBy: (delta: Point) => store.getState().panBy(delta),
     zoomAt: (anchor: Point, factor: number) => store.getState().zoomAt(anchor, factor),
     recenter: () => store.getState().recenter(),
     getViewport: () => store.getState().viewport,
-    isEditorOpen: () => store.getState().editor !== null,
   };
+  const modal = { isEditorOpen: () => store.getState().editor !== null };
   const pointer = {
     pointerMove: (screenPoint: Point) => store.getState().pointerMove(screenPoint),
     pointerLeave: () => store.getState().pointerLeave(),
@@ -152,7 +164,7 @@ function attachInput(app: Application, host: HTMLElement, store: OfficeStore): (
   const detachMouse = attachMouse(
     host,
     createMouseInput(
-      { ...camera, ...pointer, clickAt: (at: Point) => store.getState().clickAt(at) },
+      { ...camera, ...modal, ...pointer, clickAt: (at: Point) => store.getState().clickAt(at) },
       host,
     ),
   );
@@ -164,6 +176,7 @@ function attachInput(app: Application, host: HTMLElement, store: OfficeStore): (
   };
   const keyboard = createKeyboardInput({
     ...camera,
+    ...modal,
     ...selection,
     toggleDebug: () => store.getState().toggleDebug(),
   });
@@ -221,26 +234,22 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
         app.stage.addChild(root);
         const initial = store.getState();
         applyCamera(root, initial.camera);
-        sortScene(scene, initial);
-        updateAgents(scene, initial);
+        const placements = characterPlacements(initial.sim);
+        sortScene(scene, initial, placements);
+        updateAgents(scene, initial, placements);
         drawDebugOverlay(debugLayer, initial.debug, initial.layout);
         drawOverlay(highlight, initial.hover, initial.layout);
         unsubscribe = store.subscribe((state, prev) => {
           if (state.camera !== prev.camera) applyCamera(root, state.camera);
           if (state.debug !== prev.debug) drawDebugOverlay(debugLayer, state.debug, state.layout);
+          const moved = state.sim !== prev.sim;
+          const placements = characterPlacements(state.sim);
           // A hovered character's highlight moves with it.
-          if (
-            state.hover !== prev.hover ||
-            (state.hover?.type === 'agent' && state.sim !== prev.sim)
-          )
-            drawOverlay(highlight, state.hover, state.layout, characterPlacements(state.sim));
-          if (state.sim !== prev.sim) sortScene(scene, state);
-          if (
-            state.sim !== prev.sim ||
-            state.team !== prev.team ||
-            state.selection !== prev.selection
-          )
-            updateAgents(scene, state);
+          if (state.hover !== prev.hover || (state.hover?.type === 'agent' && moved))
+            drawOverlay(highlight, state.hover, state.layout, placements);
+          if (moved) sortScene(scene, state, placements);
+          if (moved || state.team !== prev.team || state.selection !== prev.selection)
+            updateAgents(scene, state, placements);
         });
 
         app.renderer.on('resize', (width: number, height: number) =>

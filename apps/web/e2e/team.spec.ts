@@ -1,14 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
-import { marketingLayout, marketingTeam } from '@ai-hq/domain';
-import { agentToScreen, openOffice, readAgents, readHover, readSceneOrder } from './support/hook';
-
-/** Tile where the owner of `deskId` works (its desk use point). */
-function deskTile(deskId: string) {
-  const desk = marketingLayout.objects.find((o) => o.id === deskId);
-  const point = desk?.usePoints[0];
-  if (!point) throw new Error(`${deskId} has no use point`);
-  return point.tile;
-}
+import { marketingTeam } from '@ai-hq/domain';
+import {
+  agentToScreen,
+  deskTileOf,
+  openOffice,
+  readAgents,
+  readHover,
+  readSceneOrder,
+} from './support/hook';
 
 const cards = (page: Page) => page.getByRole('region', { name: 'Equipo' }).getByRole('listitem');
 
@@ -38,8 +37,8 @@ test.describe('US1 — ver a mi equipo en la oficina (FR-007, FR-023, FR-033, SC
         const profile = marketingTeam[i]!;
         expect(agent.status).toBe('idle');
         expect(agent.number).toBe(i + 1);
-        expect(agent.tile).toEqual(deskTile(profile.deskId));
-        expect(agent.position).toEqual(deskTile(profile.deskId));
+        expect(agent.tile).toEqual(deskTileOf(profile.deskId));
+        expect(agent.position).toEqual(deskTileOf(profile.deskId));
       });
       expect(new Set(agents.map((a) => a.tile.x * 100 + a.tile.y)).size).toBe(6);
     });

@@ -5,19 +5,18 @@ import {
   marketingLayout,
   marketingTeam,
   walkability,
-  type Coord,
 } from '@ai-hq/domain';
-import { openOffice, readAgents, readHookField, type AgentSnapshot } from './support/hook';
+import {
+  deskTileOf,
+  openOffice,
+  readAgents,
+  readHookField,
+  type AgentSnapshot,
+} from './support/hook';
 
 const walk = walkability(marketingLayout);
 
-function deskTile(deskId: string): Coord {
-  const point = marketingLayout.objects.find((o) => o.id === deskId)?.usePoints[0];
-  if (!point) throw new Error(`${deskId} has no use point`);
-  return point.tile;
-}
-
-const desks = new Map(marketingTeam.map((a) => [a.id, deskTile(a.deskId)]));
+const desks = new Map(marketingTeam.map((a) => [a.id, deskTileOf(a.deskId)]));
 
 /** On a walkable tile, or on the segment between two walkable 4-neighbours (FR-012). */
 function onWalkablePath({ x, y }: { x: number; y: number }): boolean {

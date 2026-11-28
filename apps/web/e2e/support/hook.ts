@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import { CHARACTER_BODY } from '@ai-hq/domain';
+import { CHARACTER_BODY, marketingLayout } from '@ai-hq/domain';
 import type {
   AgentStatus,
   Camera,
@@ -191,4 +191,11 @@ export async function offCenter(page: Page, id: string): Promise<number> {
   const feet = await feetToScreen(page, id);
   const { width, height } = viewportOf(page);
   return Math.hypot(feet.x - width / 2, feet.y - height / 2);
+}
+
+/** Tile where the owner of `deskId` works (the desk's use point, on its chair). */
+export function deskTileOf(deskId: string): Coord {
+  const point = marketingLayout.objects.find((o) => o.id === deskId)?.usePoints[0];
+  if (!point) throw new Error(`${deskId} has no use point`);
+  return point.tile;
 }
