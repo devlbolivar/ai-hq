@@ -57,6 +57,8 @@ export interface AIHQTestHook {
   gridToScreen(tile: Coord): Point;
   /** Agent whose selection ring is drawn (visible), or null (FR-027). */
   readonly ringFor: string | null;
+  /** The agent editor dialog is open. */
+  readonly editorOpen: boolean;
   /** Screen position of the center of an agent's body. */
   agentToScreen(id: string): Point;
   readonly test: {
@@ -215,6 +217,9 @@ export function installTestHook(
     },
     get selection(): Selection {
       return store.getState().selection;
+    },
+    get editorOpen() {
+      return store.getState().editor !== null;
     },
     get ringFor() {
       const ringed = objects.children.find(
