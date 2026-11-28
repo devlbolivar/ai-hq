@@ -98,3 +98,25 @@ describe('TeamPanel — selectable cards (FR-026, FR-027, US2-1)', () => {
     expect(screen.getByRole('button', { name: '2. Radar — Investigador' })).toBeTruthy();
   });
 });
+
+describe('TeamPanel — status readable (FR-033, US1-5)', () => {
+  it('describes each card button with its status, never truncated', () => {
+    const store = createOfficeStore({ viewport, paused: true });
+    render(<TeamPanel store={store} />);
+    const { sim } = store.getState();
+    act(() =>
+      store.setState({
+        sim: {
+          ...sim,
+          agents: sim.agents.map((a, i) => (i === 5 ? { ...a, status: 'waiting_review' } : a)),
+        },
+      }),
+    );
+    const card = screen.getByRole('button', { name: '6. Community Manager — Comunidad' });
+    const description = card.getAttribute('aria-describedby');
+    expect(description).toBeTruthy();
+    const status = document.getElementById(description!)!;
+    expect(status.textContent).toBe('Esperando revisión');
+    expect(status.className).not.toContain('truncate');
+  });
+});
