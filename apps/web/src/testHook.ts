@@ -123,15 +123,13 @@ export function installTestHook(
     }
     if (unsubscribePatrol) return;
 
-    let starting = true;
     let sending = false;
     function sendPatrolOrders() {
       const { paused, sim, world } = store.getState();
       if (paused || sending) return;
-      const waiting = sim.agents.filter(
-        (agent) => agent.next === null && (starting || agent.status === 'idle'),
-      );
-      starting = false;
+      // Every still agent: arrived from a patrol go-to (idle) or from anything else (an activity
+      // it was walking to when patrol started, an order sent meanwhile), so all keep walking.
+      const waiting = sim.agents.filter((agent) => agent.next === null);
       if (waiting.length === 0) return;
 
       const tiles = world.walk.flatMap((row, y) =>
