@@ -1,4 +1,5 @@
 import { OfficeCanvas } from './render/OfficeCanvas';
+import { AgentPanel } from './ui/AgentPanel';
 import { DebugToggle } from './ui/DebugToggle';
 import { HoverLabel } from './ui/HoverLabel';
 import { PathStatus } from './ui/PathStatus';
@@ -11,6 +12,7 @@ export function App() {
       <h1 className="sr-only">AI HQ — Marketing</h1>
       <OfficeCanvas />
       <TeamPanel />
+      <AgentPanel />
       <HoverLabel />
       <PathStatus />
       <DebugToggle />
