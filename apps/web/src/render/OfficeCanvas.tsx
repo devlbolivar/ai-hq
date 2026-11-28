@@ -136,6 +136,8 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
         store.getState().setViewport({ width: app.screen.width, height: app.screen.height });
 
         detachInput = attachInput(app, host, store);
+        // One simulation frame per rendered frame (fixed steps inside, research R6).
+        app.ticker.add((ticker: Ticker) => store.getState().tick(ticker.deltaMS));
         app.ticker.add(() => hook?.recordFrame(performance.now()));
         app.render();
         hook?.markReady(objects.children);
