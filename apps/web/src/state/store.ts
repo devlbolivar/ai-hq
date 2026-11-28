@@ -2,16 +2,21 @@ import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import {
   advanceFrame,
+  agentPosition,
+  centerOn,
   createSimulation,
   createSimWorld,
+  cycleSelection,
   findPath,
   hitTest,
   initialCamera,
   marketingLayout,
   marketingTeam,
   pan,
+  positionToWorld,
   recenter,
   screenToWorld,
+  selectByNumber,
   validateLayout,
   walkability,
   zoomAt,
@@ -27,6 +32,7 @@ import {
   type Viewport,
 } from '@ai-hq/domain';
 import { readSimOptions } from '../seed';
+import { followOffset, FOLLOW_MS } from './follow';
 
 /** Debug mode (US4, FR-023): origin and destination picked with clicks, and the route between them. */
 export interface DebugState {
@@ -42,6 +48,20 @@ export const IDLE_DEBUG: DebugState = Object.freeze({
   to: null,
   result: null,
 });
+
+/** Selected agent and whether the camera follows it (data-model.md "Selection"). */
+export interface Selection {
+  readonly agentId: string | null;
+  readonly following: boolean;
+}
+
+export const NO_SELECTION: Selection = Object.freeze({ agentId: null, following: false });
+
+/** Smooth centering in progress after a selection (≤ 400 ms, FR-028). */
+export interface FollowTransition {
+  readonly startOffset: Point;
+  readonly elapsedMs: number;
+}
 
 export interface OfficeState {
   readonly layout: OfficeLayout;
@@ -63,8 +83,20 @@ export interface OfficeState {
   /** `Space` pauses the whole simulation (FR-020). */
   readonly paused: boolean;
   readonly seed: number;
-  /** Advances the simulation by one rendered frame of `dtMs` (nothing while paused). */
+  readonly selection: Selection;
+  readonly follow: FollowTransition | null;
+  /**
+   * One rendered frame of `dtMs`: advances the simulation (unless paused) and moves the camera
+   * after the followed agent (also while paused: it uses frame time).
+   */
   tick(dtMs: number): void;
+  /** Selects an agent and starts following it (FR-026, FR-028). */
+  select(agentId: string): void;
+  deselect(): void;
+  /** `1`–`9`: the n-th agent of the team; numbers without an agent change nothing. */
+  selectNumber(n: number): void;
+  /** `Tab` (1) / `Shift+Tab` (−1), cyclic. */
+  cycle(direction: 1 | -1): void;
   setViewport(viewport: Viewport): void;
   /** Pans by a screen-pixel delta (clamped by the domain, FR-016). */
   panBy(delta: Point): void;
@@ -107,6 +139,24 @@ function withCamera(state: OfficeState, camera: Camera) {
   return { camera, hover: hoverAt(state.pointer, camera, state.layout, state.hover) };
 }
 
+/** Camera that keeps the followed agent centered, easing in while a transition runs. */
+function followCamera(state: OfficeState, transition: FollowTransition | null): Camera {
+  const agent = state.sim.agents.find((a) => a.id === state.selection.agentId);
+  if (!agent) return state.camera;
+  const world = positionToWorld(agentPosition(agent), state.layout.tile);
+  const target = centerOn(state.camera, world, state.viewport, state.layout);
+  if (!transition) return target;
+  return {
+    zoom: target.zoom,
+    offset: followOffset(transition.startOffset, target.offset, transition.elapsedMs),
+  };
+}
+
+/** Any manual camera move stops following but keeps the selection (FR-028). */
+function stopFollowing(selection: Selection) {
+  return { selection: { agentId: selection.agentId, following: false }, follow: null };
+}
+
 export interface OfficeStoreOptions {
   readonly viewport: Viewport;
   readonly layout?: OfficeLayout;
@@ -139,7 +189,7 @@ export function createOfficeStore({
     return { ...debug, to: picked, result: findPath(walk, debug.from, picked) };
   };
 
-  return createStore<OfficeState>()((set) => ({
+  return createStore<OfficeState>()((set, get) => ({
     layout,
     viewport,
     camera: initialCamera(viewport, layout),
@@ -153,41 +203,80 @@ export function createOfficeStore({
     accumulatorMs: 0,
     paused,
     seed,
+    selection: NO_SELECTION,
+    follow: null,
     tick: (dtMs) =>
       set((state) => {
-        if (state.paused) return state;
-        const { sim, accumulatorMs } = advanceFrame(
-          state.sim,
-          state.world,
-          state.accumulatorMs,
-          dtMs,
-        );
-        return { sim, accumulatorMs };
+        const advanced = state.paused
+          ? {}
+          : advanceFrame(state.sim, state.world, state.accumulatorMs, dtMs);
+        if (!state.selection.following) return advanced;
+        const view = { ...state, ...advanced };
+        const elapsed = (state.follow?.elapsedMs ?? FOLLOW_MS) + dtMs;
+        const transition =
+          state.follow && elapsed < FOLLOW_MS ? { ...state.follow, elapsedMs: elapsed } : null;
+        return {
+          ...advanced,
+          ...withCamera(view, followCamera(view, transition)),
+          follow: transition,
+        };
       }),
+    select: (agentId) =>
+      set((state) =>
+        state.team.some((a) => a.id === agentId)
+          ? {
+              selection: { agentId, following: true },
+              follow: { startOffset: state.camera.offset, elapsedMs: 0 },
+              cameraTouched: true,
+            }
+          : state,
+      ),
+    deselect: () => set({ selection: NO_SELECTION, follow: null }),
+    selectNumber: (n) => {
+      const { team, selection, select } = get();
+      const id = selectByNumber(
+        team.map((a) => a.id),
+        selection.agentId,
+        n,
+      );
+      if (id !== null && id !== selection.agentId) select(id);
+    },
+    cycle: (direction) => {
+      const { team, selection, select } = get();
+      const id = cycleSelection(
+        team.map((a) => a.id),
+        selection.agentId,
+        direction,
+      );
+      if (id !== null) select(id);
+    },
     setViewport: (next) =>
-      set((state) => ({
-        viewport: next,
-        ...withCamera(
-          state,
-          state.cameraTouched
+      set((state) => {
+        const resized = { ...state, viewport: next };
+        const camera = state.selection.following
+          ? followCamera(resized, null)
+          : state.cameraTouched
             ? pan(state.camera, { x: 0, y: 0 }, next, state.layout)
-            : initialCamera(next, state.layout),
-        ),
-      })),
+            : initialCamera(next, state.layout);
+        return { viewport: next, ...withCamera(state, camera), follow: null };
+      }),
     panBy: (delta) =>
       set((state) => ({
         ...withCamera(state, pan(state.camera, delta, state.viewport, state.layout)),
         cameraTouched: true,
+        ...stopFollowing(state.selection),
       })),
     zoomAt: (anchor, factor) =>
       set((state) => ({
         ...withCamera(state, zoomAt(state.camera, anchor, factor, state.viewport, state.layout)),
         cameraTouched: true,
+        ...stopFollowing(state.selection),
       })),
     recenter: () =>
       set((state) => ({
         ...withCamera(state, recenter(state.viewport, state.layout)),
         cameraTouched: false,
+        ...stopFollowing(state.selection),
       })),
     pointerMove: (screenPoint) =>
       set((state) => ({
