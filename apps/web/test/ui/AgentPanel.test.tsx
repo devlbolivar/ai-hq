@@ -33,3 +33,14 @@ describe('AgentPanel (FR-033, spec Assumptions: selected agent panel)', () => {
     expect(panel.textContent).toContain('Trabajando');
   });
 });
+
+describe('AgentPanel — edit button', () => {
+  it('opens the editor of the selected agent', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const store = createOfficeStore({ viewport, paused: true });
+    render(<AgentPanel store={store} />);
+    act(() => store.getState().select('copywriter'));
+    await userEvent.click(screen.getByRole('button', { name: 'Editar' }));
+    expect(store.getState().editor).toEqual({ agentId: 'copywriter' });
+  });
+});

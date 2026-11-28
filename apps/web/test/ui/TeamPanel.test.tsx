@@ -33,10 +33,24 @@ describe('TeamPanel (FR-033, US1-4, US1-5)', () => {
     const { sim } = store.getState();
     act(() =>
       store.setState({
-        sim: { ...sim, agents: sim.agents.map((a, i) => (i === 2 ? { ...a, status: 'break' } : a)) },
+        sim: {
+          ...sim,
+          agents: sim.agents.map((a, i) => (i === 2 ? { ...a, status: 'break' } : a)),
+        },
       }),
     );
     expect(cards()[2]!.textContent).toContain('Descanso');
     expect(cards()[1]!.textContent).toContain('Desocupado');
+  });
+});
+
+describe('TeamPanel — edit buttons (FR-033)', () => {
+  it('opens the editor of the agent from its card', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const store = createOfficeStore({ viewport, paused: true });
+    render(<TeamPanel store={store} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Editar Designer' }));
+    expect(store.getState().editor).toEqual({ agentId: 'designer' });
+    expect(store.getState().selection.agentId).toBe('designer');
   });
 });
