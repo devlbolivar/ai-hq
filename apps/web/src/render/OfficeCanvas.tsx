@@ -159,6 +159,7 @@ function attachInput(app: Application, host: HTMLElement, store: OfficeStore): (
     selectNumber: (n: number) => store.getState().selectNumber(n),
     cycle: (direction: 1 | -1) => store.getState().cycle(direction),
     deselect: () => store.getState().deselect(),
+    togglePause: () => store.getState().togglePause(),
   };
   const keyboard = createKeyboardInput({
     ...camera,

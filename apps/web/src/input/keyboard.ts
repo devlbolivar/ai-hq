@@ -14,6 +14,8 @@ export interface KeyboardCameraActions {
   cycle(direction: 1 | -1): void;
   /** `Esc`. */
   deselect(): void;
+  /** `Space`: pauses or resumes the simulation (FR-020). */
+  togglePause(): void;
 }
 
 export interface KeyboardInput {
@@ -47,10 +49,13 @@ function isFocusedControl(target: EventTarget | null): boolean {
   );
 }
 
-/** Agent selection (`1`–`9`, `Tab`, `Shift+Tab`, `Esc`); true when the key acted. */
-function handleSelectionKey(event: KeyboardEvent, actions: KeyboardCameraActions): boolean {
+/** Selection (`1`–`9`, `Tab`, `Shift+Tab`, `Esc`) and pause (`Space`); true when the key acted. */
+function handleTeamKey(event: KeyboardEvent, actions: KeyboardCameraActions): boolean {
   if (isFocusedControl(event.target)) return false;
-  if (/^[1-9]$/.test(event.key)) actions.selectNumber(Number(event.key));
+  if (event.key === ' ') {
+    // Holding Space must not flicker the pause.
+    if (!event.repeat) actions.togglePause();
+  } else if (/^[1-9]$/.test(event.key)) actions.selectNumber(Number(event.key));
   else if (event.key === 'Tab') actions.cycle(event.shiftKey ? -1 : 1);
   else if (event.key === 'Escape') actions.deselect();
   else return false;
@@ -63,7 +68,7 @@ export function createKeyboardInput(actions: KeyboardCameraActions): KeyboardInp
   return {
     handleKeyDown(event) {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
-      if (handleSelectionKey(event, actions)) {
+      if (handleTeamKey(event, actions)) {
         event.preventDefault();
         return;
       }
