@@ -143,6 +143,7 @@ function attachInput(app: Application, host: HTMLElement, store: OfficeStore): (
     zoomAt: (anchor: Point, factor: number) => store.getState().zoomAt(anchor, factor),
     recenter: () => store.getState().recenter(),
     getViewport: () => store.getState().viewport,
+    isEditorOpen: () => store.getState().editor !== null,
   };
   const pointer = {
     pointerMove: (screenPoint: Point) => store.getState().pointerMove(screenPoint),

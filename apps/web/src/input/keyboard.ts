@@ -16,6 +16,8 @@ export interface KeyboardCameraActions {
   deselect(): void;
   /** `Space`: pauses or resumes the simulation (FR-020). */
   togglePause(): void;
+  /** While the editor dialog is open no office shortcut acts (FR-029). */
+  isEditorOpen(): boolean;
 }
 
 export interface KeyboardInput {
@@ -68,6 +70,7 @@ export function createKeyboardInput(actions: KeyboardCameraActions): KeyboardInp
   return {
     handleKeyDown(event) {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (actions.isEditorOpen()) return;
       if (handleTeamKey(event, actions)) {
         event.preventDefault();
         return;
@@ -94,6 +97,10 @@ export function createKeyboardInput(actions: KeyboardCameraActions): KeyboardInp
       held.delete(event.key.toLowerCase());
     },
     tick(dtMs) {
+      if (actions.isEditorOpen()) {
+        held.clear();
+        return;
+      }
       const left = held.has('arrowleft') || held.has('a');
       const right = held.has('arrowright') || held.has('d');
       const up = held.has('arrowup') || held.has('w');

@@ -9,6 +9,8 @@ export interface MouseActions {
   pointerLeave(): void;
   /** A click without drag at a host-relative point: the store decides what it picks (FR-026). */
   clickAt(screenPoint: Point): void;
+  /** While the editor dialog is open no office gesture acts (FR-029). */
+  isEditorOpen(): boolean;
 }
 
 /** The fields of a `PointerEvent` the mouse input reads. */
@@ -81,13 +83,14 @@ export function createMouseInput(actions: MouseActions, element?: Element): Mous
   };
 
   const hover = (event: PointerInfo) => {
-    if (!overScene(event.target)) return leave();
+    if (actions.isEditorOpen() || !overScene(event.target)) return leave();
     hovering = true;
     actions.pointerMove(relative(event.clientX, event.clientY));
   };
 
   return {
     handlePointerDown(event) {
+      if (actions.isEditorOpen()) return;
       if (event.button !== PRIMARY_BUTTON || startsOnUiControl(event.target)) return;
       const at = { x: event.clientX, y: event.clientY };
       press = { start: at, last: at, dragging: false };
@@ -114,6 +117,7 @@ export function createMouseInput(actions: MouseActions, element?: Element): Mous
       press = null;
     },
     handleWheel(event) {
+      if (actions.isEditorOpen()) return;
       if (event.deltaY === 0 || startsOnUiControl(event.target)) return;
       event.preventDefault();
       actions.zoomAt(relative(event.clientX, event.clientY), ZOOM_STEP ** -wheelNotches(event));
