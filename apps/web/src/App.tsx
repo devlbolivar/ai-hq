@@ -1,4 +1,5 @@
 import { OfficeCanvas } from './render/OfficeCanvas';
+import { AgentEditor } from './ui/AgentEditor';
 import { AgentPanel } from './ui/AgentPanel';
 import { DebugToggle } from './ui/DebugToggle';
 import { HoverLabel } from './ui/HoverLabel';
@@ -14,6 +15,7 @@ export function App() {
       <OfficeCanvas />
       <TeamPanel />
       <AgentPanel />
+      <AgentEditor />
       <HoverLabel />
       <PathStatus />
       <PauseIndicator />

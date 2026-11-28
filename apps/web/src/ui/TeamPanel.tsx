@@ -46,6 +46,14 @@ export function TeamPanel({ store = officeStore }: { store?: OfficeStore }) {
               className="h-3 w-3 shrink-0 rounded-full"
               style={{ backgroundColor: toCss(agentColorHex(agent.color)) }}
             />
+            <button
+              type="button"
+              aria-label={`Editar ${agent.name}`}
+              onClick={() => store.getState().openEditor(agent.id)}
+              className="rounded px-1.5 py-0.5 text-xs text-slate-300 hover:bg-slate-700 focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:outline-none"
+            >
+              Editar
+            </button>
           </li>
         ))}
       </ol>

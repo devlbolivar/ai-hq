@@ -28,6 +28,13 @@ export function AgentPanel({ store = officeStore }: { store?: OfficeStore }) {
       </div>
       <p className="mt-1 text-xs text-slate-400">{profile.role}</p>
       <p className="mt-2 text-sm">{STATUS_LABELS[status]}</p>
+      <button
+        type="button"
+        onClick={() => store.getState().openEditor(profile.id)}
+        className="mt-3 rounded-md border border-slate-600 px-3 py-1 text-sm hover:bg-slate-700 focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:outline-none"
+      >
+        Editar
+      </button>
     </section>
   );
 }
