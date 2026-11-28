@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   agentPosition,
+  applyOrder,
   CHARACTER_BODY,
   marketingLayout,
   marketingTeam,
@@ -25,6 +26,13 @@ function install(store = createOfficeStore({ viewport })) {
   controls = installTestHook(window, store, DEV);
   if (!controls || !window.__AIHQ__) throw new Error('hook not installed');
   return { store, controls, hook: window.__AIHQ__ };
+}
+
+function tickFrames(store: ReturnType<typeof createOfficeStore>, durationMs: number) {
+  const { tick } = store.getState();
+  for (let elapsed = 0; elapsed < durationMs; elapsed += 16) {
+    tick(Math.min(16, durationMs - elapsed));
+  }
 }
 
 describe('shouldExposeTestHook (contracts/ui-contract.md)', () => {
@@ -66,6 +74,7 @@ describe('installTestHook', () => {
         'agents',
         'selection',
         'agentToScreen',
+        'test',
       ].sort(),
     );
     expect(hook.ready).toBe(false);
@@ -75,6 +84,7 @@ describe('installTestHook', () => {
     expect(hook.debug).toEqual({ enabled: false, from: null, to: null, result: null });
     expect(hook.fps).toBe(0);
     expect(typeof hook.gridToScreen).toBe('function');
+    expect(Object.keys(hook.test).sort()).toEqual(['order', 'patrol']);
   });
 
   it('is read-only', () => {
@@ -82,6 +92,120 @@ describe('installTestHook', () => {
     expect(() => {
       (hook as unknown as { ready: boolean }).ready = true;
     }).toThrow(TypeError);
+    expect(hook.test).toBeDefined();
+    expect(Object.isFrozen(hook.test)).toBe(true);
+  });
+
+  it('sends orders through the store and returns null for queued orders', () => {
+    const { store, hook } = install();
+    const sendOrder = vi.fn(store.getState().sendOrder);
+    store.setState({ sendOrder });
+    const agentId = hook.agents[0]!.id;
+    const move = { type: 'go-to', tile: marketingLayout.entrance } as const;
+    expect(hook.test.order(agentId, move)).toEqual({ ok: true, changed: true });
+    expect(sendOrder).toHaveBeenLastCalledWith(agentId, move);
+    expect(hook.agents[0]!.forced).toBe(true);
+
+    store.getState().togglePause();
+    const activity = { type: 'activity', activity: 'meeting' } as const;
+    expect(hook.test.order(agentId, activity)).toBeNull();
+    expect(sendOrder).toHaveBeenLastCalledWith(agentId, activity);
+    expect(store.getState().queuedOrders).toEqual([{ agentId, order: activity }]);
+  });
+
+  it('starts all six agents toward their farthest acceptable tiles and keeps them walking', () => {
+    const { store, hook } = install();
+    const { sim: initialSim, world } = store.getState();
+    const tiles = world.walk.flatMap((row, y) =>
+      row.flatMap((free, x) => (free ? [{ x, y }] : [])),
+    );
+    // Row-major order breaks distance ties. Apply each accepted order before finding the next
+    // destination so the reference simulation accounts for tiles claimed by earlier agents.
+    let expected = initialSim;
+    for (const agent of initialSim.agents) {
+      const distance = (tile: typeof agent.tile) =>
+        Math.abs(tile.x - agent.tile.x) + Math.abs(tile.y - agent.tile.y);
+      for (const tile of [...tiles].sort((a, b) => distance(b) - distance(a))) {
+        const outcome = applyOrder(expected, world, agent.id, { type: 'go-to', tile });
+        if (!outcome.result.ok) continue;
+        expected = outcome.sim;
+        break;
+      }
+    }
+
+    hook.test.patrol(true);
+    const started = store.getState().sim.agents;
+    expect(started.map((agent) => agent.target?.tile)).toEqual(
+      expected.agents.map((agent) => agent.target?.tile),
+    );
+    expect(started).toHaveLength(6);
+    store.getState().tick(16);
+    expect(store.getState().sim.agents.every((agent) => agent.status === 'walking')).toBe(true);
+
+    for (let elapsed = 0; elapsed < 20_000; elapsed += 500) {
+      tickFrames(store, 500);
+      for (const agent of store.getState().sim.agents) {
+        expect(agent.next, `${agent.id} at ${elapsed + 500} ms`).not.toBeNull();
+      }
+    }
+    expect(
+      store.getState().sim.agents.some((agent, i) => agent.target !== started[i]!.target),
+    ).toBe(true);
+  });
+
+  it('skips an agent when all candidate orders fail without reentering patrol', () => {
+    const { store, hook } = install();
+    const { sim, world } = store.getState();
+    const sendOrder = vi.fn(() => {
+      store.setState({ sim });
+      return { ok: false, reason: 'INVALID_DESTINATION' } as const;
+    });
+    store.setState({ sendOrder });
+
+    hook.test.patrol(true);
+
+    expect(sendOrder).toHaveBeenCalledTimes(
+      world.walk.flat().filter(Boolean).length * sim.agents.length,
+    );
+    expect(store.getState().sim).toBe(sim);
+  });
+
+  it('sends no patrol orders while paused and starts on resume', () => {
+    const { store, hook } = install(createOfficeStore({ viewport, paused: true }));
+    const sendOrder = vi.fn(store.getState().sendOrder);
+    store.setState({ sendOrder });
+
+    hook.test.patrol(true);
+    tickFrames(store, 500);
+    expect(sendOrder).not.toHaveBeenCalled();
+    expect(store.getState().queuedOrders).toEqual([]);
+
+    store.getState().togglePause();
+    expect(store.getState().sim.agents.every((agent) => agent.next !== null)).toBe(true);
+
+    store.getState().togglePause();
+    sendOrder.mockClear();
+    tickFrames(store, 500);
+    expect(sendOrder).not.toHaveBeenCalled();
+    expect(store.getState().queuedOrders).toEqual([]);
+  });
+
+  it.each(['patrol(false)', 'dispose()'] as const)('stops sending on %s', (stop) => {
+    const { store, controls, hook } = install();
+    const sendOrder = vi.fn(store.getState().sendOrder);
+    store.setState({ sendOrder });
+    hook.test.patrol(true);
+    expect(store.getState().sim.agents.every((agent) => agent.next !== null)).toBe(true);
+
+    if (stop === 'patrol(false)') hook.test.patrol(false);
+    else controls.dispose();
+    sendOrder.mockClear();
+    tickFrames(store, 20_000);
+
+    expect(sendOrder).not.toHaveBeenCalled();
+    for (const agent of store.getState().sim.agents) {
+      expect(agent).toMatchObject({ status: 'idle', next: null, forced: true });
+    }
   });
 
   it('reads the camera live from the store', () => {

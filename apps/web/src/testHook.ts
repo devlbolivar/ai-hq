@@ -10,6 +10,8 @@ import {
   type Coord,
   type Direction,
   type GridPosition,
+  type Order,
+  type OrderResult,
   type Point,
   type SceneHoverTarget,
 } from '@ai-hq/domain';
@@ -34,7 +36,7 @@ export interface AgentSnapshot {
   readonly celebrating: boolean;
 }
 
-/** Read-only scene snapshot for e2e tests (contracts/ui-contract.md). */
+/** Scene snapshot and controls for e2e tests (contracts/ui-contract.md). */
 export interface AIHQTestHook {
   readonly ready: boolean;
   readonly layoutId: string;
@@ -55,6 +57,10 @@ export interface AIHQTestHook {
   gridToScreen(tile: Coord): Point;
   /** Screen position of the center of an agent's body. */
   agentToScreen(id: string): Point;
+  readonly test: {
+    order(agentId: string, order: Order): OrderResult | null;
+    patrol(on: boolean): void;
+  };
 }
 
 declare global {
@@ -99,6 +105,53 @@ export function installTestHook(
   let objects: LabeledChildren = { children: [] };
   const frames: number[] = [];
   const sceneLabels = () => objects.children.map((child) => child.label);
+  let unsubscribePatrol: (() => void) | undefined;
+
+  function patrol(on: boolean): void {
+    if (!on) {
+      unsubscribePatrol?.();
+      unsubscribePatrol = undefined;
+      return;
+    }
+    if (unsubscribePatrol) return;
+
+    let starting = true;
+    let sending = false;
+    function sendPatrolOrders() {
+      const { paused, sim, world } = store.getState();
+      if (paused || sending) return;
+      const waiting = sim.agents.filter(
+        (agent) => agent.next === null && (starting || agent.status === 'idle'),
+      );
+      starting = false;
+      if (waiting.length === 0) return;
+
+      const tiles = world.walk.flatMap((row, y) =>
+        row.flatMap((walkable, x) => (walkable ? [{ x, y }] : [])),
+      );
+      // sendOrder notifies subscribers synchronously, even when a destination is rejected.
+      sending = true;
+      try {
+        for (const agent of waiting) {
+          const distance = (tile: Coord) =>
+            Math.abs(tile.x - agent.tile.x) + Math.abs(tile.y - agent.tile.y);
+          tiles.sort((a, b) => distance(b) - distance(a) || a.y - b.y || a.x - b.x);
+          for (const tile of tiles) {
+            const state = store.getState();
+            if (state.paused || !unsubscribePatrol) return;
+            if (state.sendOrder(agent.id, { type: 'go-to', tile })?.ok) break;
+          }
+        }
+      } finally {
+        sending = false;
+      }
+    }
+
+    unsubscribePatrol = store.subscribe((state, previous) => {
+      if (state.sim !== previous.sim || state.paused !== previous.paused) sendPatrolOrders();
+    });
+    sendPatrolOrders();
+  }
 
   const hook: AIHQTestHook = Object.freeze({
     get ready() {
@@ -168,6 +221,10 @@ export function installTestHook(
       const feet = positionToWorld(agentPosition(agent), layout.tile);
       return worldToScreen(camera, { x: feet.x, y: feet.y - CHARACTER_BODY.height / 2 });
     },
+    test: Object.freeze({
+      order: (agentId: string, order: Order) => store.getState().sendOrder(agentId, order),
+      patrol,
+    }),
   });
 
   target.__AIHQ__ = hook;
@@ -182,6 +239,7 @@ export function installTestHook(
       while (frames.length > 0 && (frames[0] as number) <= now - FPS_WINDOW_MS) frames.shift();
     },
     dispose() {
+      patrol(false);
       if (target.__AIHQ__ === hook) delete target.__AIHQ__;
     },
   };
