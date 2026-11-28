@@ -1,19 +1,48 @@
 import { useEffect, useRef } from 'react';
 import { Application, Container, Graphics, type Ticker } from 'pixi.js';
-import { drawOrder, ZOOM_MAX, type Camera, type Coord, type Point } from '@ai-hq/domain';
+import {
+  agentColorHex,
+  CHARACTER_BODY,
+  drawOrder,
+  positionToWorld,
+  sceneOrder,
+  ZOOM_MAX,
+  type Camera,
+  type Coord,
+  type Point,
+} from '@ai-hq/domain';
 import { attachKeyboard, createKeyboardInput } from '../input/keyboard';
 import { attachMouse, createMouseInput } from '../input/mouse';
-import { officeStore, type OfficeStore } from '../state/store';
+import {
+  characterPlacements,
+  officeStore,
+  type OfficeState,
+  type OfficeStore,
+} from '../state/store';
 import { installTestHook } from '../testHook';
+import { createCharacterView, updateCharacterView, type CharacterView } from './character/pixi';
+import { poseFor } from './character/pose';
+import { bubbleSpec, createBubbleView, updateBubbleView, type BubbleView } from './drawBubble';
 import { drawFloor } from './drawFloor';
 import { drawDebugOverlay } from './drawDebugOverlay';
 import { drawObject } from './drawObject';
 import { drawOverlay } from './drawOverlay';
 import { theme } from './palette';
 
+/** Gap between the top of the body and the bubble tail (px at zoom 1). */
+const BUBBLE_GAP = 16;
+
+interface AgentViews {
+  readonly character: CharacterView;
+  readonly bubble: BubbleView;
+}
+
 interface Scene {
   readonly root: Container;
+  /** Furniture and characters, sorted by `zIndex` = position in `sceneOrder` (research R11). */
   readonly objects: Container;
+  readonly objectViews: ReadonlyMap<string, Container>;
+  readonly agents: ReadonlyMap<string, AgentViews>;
   /** Hover highlight, redrawn when `hover` changes. */
   readonly highlight: Graphics;
   /** Debug overlay (walkable grid, entrance, use points, route), under the hover highlight. */
@@ -29,20 +58,78 @@ function buildScene(store: OfficeStore): Scene {
   // Sharp up to the maximum zoom on high-density screens (research R2).
   floor.cacheAsTexture({ resolution: ZOOM_MAX * (window.devicePixelRatio || 1), antialias: true });
 
-  const objects = new Container({ label: 'objects' });
-  const order = drawOrder(layout);
+  const objects = new Container({ label: 'objects', sortableChildren: true });
+  const objectViews = new Map<string, Container>();
   const byId = new Map(layout.objects.map((o) => [o.id, o]));
-  for (const id of order) {
+  for (const id of drawOrder(layout)) {
     const obj = byId.get(id);
-    if (obj) objects.addChild(drawObject(obj, layout.tile));
+    if (!obj) continue;
+    const view = drawObject(obj, layout.tile);
+    objectViews.set(id, view);
+    objects.addChild(view);
+  }
+
+  // Bubbles above every object and character, so they are always readable (FR-025).
+  const bubbles = new Container({ label: 'bubbles' });
+  const agents = new Map<string, AgentViews>();
+  for (const profile of store.getState().team) {
+    const views = {
+      character: createCharacterView(profile.id),
+      bubble: createBubbleView(profile.id),
+    };
+    agents.set(profile.id, views);
+    objects.addChild(views.character.root);
+    bubbles.addChild(views.bubble.root);
   }
 
   const overlay = new Container({ label: 'overlay' });
   const debugLayer = new Graphics({ label: 'debug' });
   const highlight = new Graphics({ label: 'hover' });
   overlay.addChild(debugLayer, highlight);
-  root.addChild(floor, objects, overlay);
-  return { root, objects, highlight, debugLayer };
+  root.addChild(floor, objects, bubbles, overlay);
+  return { root, objects, objectViews, agents, highlight, debugLayer };
+}
+
+/** Depth order of objects and characters for the current positions (FR-023, research R10). */
+function sortScene(scene: Scene, state: OfficeState): void {
+  sceneOrder(state.layout, characterPlacements(state.sim)).forEach((item, i) => {
+    const view =
+      item.type === 'object'
+        ? scene.objectViews.get(item.id)
+        : scene.agents.get(item.id)?.character.root;
+    if (view) view.zIndex = i;
+  });
+  // Sorted now (not at the next render) so the hook always reads the real child order.
+  scene.objects.sortChildren();
+}
+
+/** Places, animates and labels every character from the simulation (FR-024, FR-025). */
+function updateAgents(scene: Scene, state: OfficeState): void {
+  const { layout, sim, selection } = state;
+  const profiles = new Map(state.team.map((p) => [p.id, p]));
+  for (const placement of characterPlacements(sim)) {
+    const agent = sim.agents[placement.teamIndex];
+    const profile = profiles.get(placement.id);
+    const views = scene.agents.get(placement.id);
+    if (!agent || !profile || !views) continue;
+    const { pose, seated } = poseFor(agent, layout);
+    updateCharacterView(
+      views.character,
+      {
+        appearance: profile.appearance,
+        color: agentColorHex(profile.color),
+        position: placement.position,
+        facing: agent.facing,
+        pose,
+        seated,
+        t: sim.timeMs,
+      },
+      layout.tile,
+    );
+    const feet = positionToWorld(placement.position, layout.tile);
+    views.bubble.root.position.set(feet.x, feet.y - CHARACTER_BODY.height - BUBBLE_GAP);
+    updateBubbleView(views.bubble, bubbleSpec(agent.status, selection.agentId === agent.id));
+  }
 }
 
 /** Mouse and keyboard drive the camera and hover through the store; returns a detach function. */
@@ -118,16 +205,26 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
         }
         host.appendChild(app.canvas);
 
-        const { root, objects, highlight, debugLayer } = buildScene(store);
+        const scene = buildScene(store);
+        const { root, highlight, debugLayer } = scene;
         app.stage.addChild(root);
         const initial = store.getState();
         applyCamera(root, initial.camera);
+        sortScene(scene, initial);
+        updateAgents(scene, initial);
         drawDebugOverlay(debugLayer, initial.debug, initial.layout);
         drawOverlay(highlight, initial.hover, initial.layout);
         unsubscribe = store.subscribe((state, prev) => {
           if (state.camera !== prev.camera) applyCamera(root, state.camera);
           if (state.debug !== prev.debug) drawDebugOverlay(debugLayer, state.debug, state.layout);
           if (state.hover !== prev.hover) drawOverlay(highlight, state.hover, state.layout);
+          if (state.sim !== prev.sim) sortScene(scene, state);
+          if (
+            state.sim !== prev.sim ||
+            state.team !== prev.team ||
+            state.selection !== prev.selection
+          )
+            updateAgents(scene, state);
         });
 
         app.renderer.on('resize', (width: number, height: number) =>
@@ -140,7 +237,7 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
         app.ticker.add((ticker: Ticker) => store.getState().tick(ticker.deltaMS));
         app.ticker.add(() => hook?.recordFrame(performance.now()));
         app.render();
-        hook?.markReady(objects.children);
+        hook?.markReady(scene.objects.children.filter((c) => !c.label.startsWith('agent:')));
       })
       .catch((error: unknown) => {
         console.error('No se pudo iniciar el render de la oficina', error);

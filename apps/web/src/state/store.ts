@@ -27,6 +27,7 @@ import {
   type AgentDraft,
   type AgentDraftErrors,
   type AgentProfile,
+  type CharacterPlacement,
   type Camera,
   type Order,
   type OrderResult,
@@ -190,6 +191,17 @@ function followCamera(state: OfficeState, transition: FollowTransition | null): 
     zoom: target.zoom,
     offset: followOffset(transition.startOffset, target.offset, transition.elapsedMs),
   };
+}
+
+/** Where each agent is drawn and hit-tested this frame (data-model.md "CharacterPlacement"). */
+export function characterPlacements(sim: Simulation): CharacterPlacement[] {
+  return sim.agents.map((agent, teamIndex) => ({
+    id: agent.id,
+    teamIndex,
+    position: agentPosition(agent),
+    tile: agent.tile,
+    next: agent.next,
+  }));
 }
 
 let noticeCount = 0;
