@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { CHARACTER_BODY } from '@ai-hq/domain';
 import type {
   AgentStatus,
   Camera,
@@ -177,4 +178,17 @@ export async function waitForCameraChange(page: Page, before: Camera): Promise<C
     .poll(async () => JSON.stringify(await readCamera(page)), { timeout: 2000 })
     .not.toBe(JSON.stringify(before));
   return readCamera(page);
+}
+
+/** Screen position of an agent's feet (where the follow camera centers, FR-028). */
+export async function feetToScreen(page: Page, id: string): Promise<Point> {
+  const [body, camera] = await Promise.all([agentToScreen(page, id), readCamera(page)]);
+  return { x: body.x, y: body.y + (CHARACTER_BODY.height / 2) * camera.zoom };
+}
+
+/** Distance in px between an agent's feet and the viewport center. */
+export async function offCenter(page: Page, id: string): Promise<number> {
+  const feet = await feetToScreen(page, id);
+  const { width, height } = viewportOf(page);
+  return Math.hypot(feet.x - width / 2, feet.y - height / 2);
 }
