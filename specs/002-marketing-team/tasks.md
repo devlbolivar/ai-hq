@@ -221,7 +221,7 @@ libre muestra el aviso; desactivar depuración devuelve la autonomía.
 - [x] T086 [P] Contract test in `packages/domain/test/contract.test.ts` — `packages/domain/src/index.ts` exports every name of `specs/002-marketing-team/contracts/domain-api.md`
 - [x] T087 [P] Color distance test in `apps/web/test/render/palette.test.ts` — every agent color is far from every `networkStyles` color (research R3)
 - [x] T088 Refactor pass over `packages/domain/src/agents/`, `scene/`, `camera/` and the new web files with all tests green (`refactor:` commits)
-- [ ] T089 Run `pnpm test:coverage` and add tests until thresholds pass (`packages/domain` ≥ 95 %, other packages ≥ 80 %)
+- [x] T089 Run `pnpm test:coverage` and add tests until thresholds pass (`packages/domain` ≥ 95 %, other packages ≥ 80 %)
 - [ ] T090 Codex read-only review (`gpt-6.2-sol`) of `git diff main...HEAD`; verify each finding, fix the confirmed ones (TDD) and discard false positives
 - [ ] T091 Run the full quality gate `pnpm lint && pnpm typecheck && pnpm test && pnpm e2e --workers=3` and the isolated perf project
 - [ ] T092 Write `specs/002-marketing-team/validation.md` (template for the user's manual validation of quickstart.md scenarios 1–6, incl. SC-002, SC-007 and SC-008) and stop for the user
