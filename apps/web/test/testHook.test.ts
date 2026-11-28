@@ -163,7 +163,8 @@ describe('installTestHook', () => {
       expect.objectContaining({ ok: true }),
     );
     let elapsed = 0;
-    while (store.getState().sim.agents[4]!.status !== 'working' && elapsed < 30_000) {
+    // It reaches its desk (`working`, still) and is sent on: the work target is replaced.
+    while (store.getState().sim.agents[4]!.target?.activity === 'work' && elapsed < 30_000) {
       store.getState().tick(16);
       elapsed += 16;
     }
@@ -172,6 +173,7 @@ describe('installTestHook', () => {
     const designer = store.getState().sim.agents[4]!;
     expect(designer.status).toBe('walking');
     expect(designer.next).not.toBeNull();
+    expect(designer.target?.activity).toBeNull();
   });
 
   it('skips an agent when all candidate orders fail without reentering patrol', () => {
