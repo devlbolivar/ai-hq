@@ -91,7 +91,8 @@ test.describe('US2 — navegar con ratón (FR-013–FR-016)', () => {
   test('dragging far keeps the office center inside the viewport', async ({ page }) => {
     const viewport = viewportOf(page);
     const before = await readCamera(page);
-    await drag(page, { x: 100, y: 100 }, { x: 4000, y: 3000 }, 20);
+    // Starts on the canvas below the team panel (top left) and away from the bottom buttons.
+    await drag(page, { x: 400, y: 600 }, { x: 4000, y: 3000 }, 20);
     const after = await waitForCameraChange(page, before);
     const center = worldToScreen(after, officeCenter(marketingLayout));
     expect(center.x).toBeGreaterThanOrEqual(0);

@@ -9,6 +9,10 @@ import {
 } from '@ai-hq/domain';
 import { gridToScreen, openOffice, readCamera, readHover } from './support/hook';
 
+/** The hover label; the pause indicator (opened paused) is also a `status`. */
+const hoverLabel = (page: Page) =>
+  page.getByRole('status').filter({ hasNotText: 'Simulación en pausa' });
+
 /** Inside the tall plant at (10,1), above the free floor tile (9,1) that it covers on screen. */
 const plantOverFloor: Point = { x: 270, y: 180 };
 
@@ -18,21 +22,22 @@ async function expectHover(page: Page, expected: HoverTarget): Promise<void> {
 
 test.describe('US3 — inspeccionar con el cursor (FR-017–FR-019)', () => {
   test.beforeEach(async ({ page }) => {
-    await openOffice(page);
+    // Paused: no agent walks over the hovered tiles.
+    await openOffice(page, { paused: true });
   });
 
   test('hovering free floor highlights that tile and shows no label', async ({ page }) => {
     const at = await gridToScreen(page, { x: 9, y: 6 });
     await page.mouse.move(at.x, at.y);
     await expectHover(page, { type: 'tile', tile: { x: 9, y: 6 } });
-    await expect(page.getByRole('status')).toHaveCount(0);
+    await expect(hoverLabel(page)).toHaveCount(0);
   });
 
   test('hovering the meeting table targets it and shows "Mesa de reuniones"', async ({ page }) => {
     const at = await gridToScreen(page, { x: 13, y: 3 });
     await page.mouse.move(at.x, at.y);
     await expectHover(page, { type: 'object', id: 'meeting-table' });
-    await expect(page.getByRole('status')).toHaveText('Mesa de reuniones');
+    await expect(hoverLabel(page)).toHaveText('Mesa de reuniones');
   });
 
   test('a plant drawn over a floor tile behind it wins the hover', async ({ page }) => {
@@ -46,7 +51,7 @@ test.describe('US3 — inspeccionar con el cursor (FR-017–FR-019)', () => {
     const at = worldToScreen(await readCamera(page), plantOverFloor);
     await page.mouse.move(at.x, at.y);
     await expectHover(page, { type: 'object', id: 'plant-2' });
-    await expect(page.getByRole('status')).toHaveText('Planta');
+    await expect(hoverLabel(page)).toHaveText('Planta');
   });
 
   test('outside the office there is no hover and no label', async ({ page }) => {
@@ -56,7 +61,7 @@ test.describe('US3 — inspeccionar con el cursor (FR-017–FR-019)', () => {
 
     await page.mouse.move(10, 10);
     await expectHover(page, null);
-    await expect(page.getByRole('status')).toHaveCount(0);
+    await expect(hoverLabel(page)).toHaveCount(0);
   });
 
   test('leaving the canvas clears the hover', async ({ page }) => {
@@ -66,6 +71,6 @@ test.describe('US3 — inspeccionar con el cursor (FR-017–FR-019)', () => {
 
     await page.dispatchEvent('main > div', 'pointerleave');
     await expectHover(page, null);
-    await expect(page.getByRole('status')).toHaveCount(0);
+    await expect(hoverLabel(page)).toHaveCount(0);
   });
 });

@@ -41,3 +41,76 @@ describe('@ai-hq/domain foundational exports (contracts/domain-api.md)', () => {
     expect(domain.marketingLayout.departmentId).toBe('marketing');
   });
 });
+
+/** Feature 002 (specs/002-marketing-team/contracts/domain-api.md). */
+const AGENT_FUNCTIONS = [
+  'transition',
+  'isActivityStatus',
+  'seedRng',
+  'nextFloat',
+  'randomInt',
+  'pick',
+  'selectByNumber',
+  'cycleSelection',
+  'agentColorHex',
+  'cleanSystemPrompt',
+  'effectivePrompt',
+  'validateTeam',
+  'validateAgentDraft',
+  'applyDraft',
+  'positionToWorld',
+  'characterSilhouette',
+  'sceneOrder',
+  'sceneHitTest',
+  'usePointKey',
+  'resolveUsePoint',
+  'usePointsFor',
+  'isReservedByOther',
+  'freeUsePointsFor',
+  'activityStatus',
+  'agentPosition',
+  'directionBetween',
+  'planRoute',
+  'advanceMovement',
+  'createSimWorld',
+  'createSimulation',
+  'stepSimulation',
+  'advanceFrame',
+  'agentById',
+  'chooseAutonomousTarget',
+] as const;
+
+describe('@ai-hq/domain agent exports (002 contracts/domain-api.md)', () => {
+  it.each(AGENT_FUNCTIONS)('exports %s', (name) => {
+    expect(typeof (domain as Record<string, unknown>)[name]).toBe('function');
+  });
+
+  it.each([
+    'AGENT_STATUSES',
+    'AGENT_COLORS',
+    'SKIN_TONES',
+    'HAIR_STYLES',
+    'HAIR_COLORS',
+    'ACCESSORIES',
+    'ZERO_INVENTION_RULE',
+    'NAME_MAX',
+    'ROLE_MAX',
+    'SYSTEM_PROMPT_MAX',
+    'CHARACTER_BODY',
+    'STEP_DURATION_MS',
+    'SIM_STEP_MS',
+    'MAX_FRAME_MS',
+    'IDLE_PAUSE_MS',
+    'WORK_MS',
+    'BREAK_MS',
+    'CELEBRATE_MS',
+    'AUTONOMOUS_ACTIVITIES',
+    'ACCEPTANCE_SEED',
+  ])('exports %s', (name) => {
+    expect(domain).toHaveProperty(name);
+  });
+
+  it('exports marketingTeam', () => {
+    expect(domain.marketingTeam).toHaveLength(6);
+  });
+});

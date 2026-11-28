@@ -2,15 +2,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ZOOM_STEP } from '@ai-hq/domain';
 import { attachKeyboard, createKeyboardInput, KEY_PAN_SPEED } from '../../src/input/keyboard';
 
-function setup() {
+function setup({ editorOpen = false } = {}) {
+  let open = editorOpen;
   const actions = {
+    isEditorOpen: vi.fn(() => open),
     panBy: vi.fn(),
     zoomAt: vi.fn(),
     recenter: vi.fn(),
     toggleDebug: vi.fn(),
     getViewport: vi.fn(() => ({ width: 1280, height: 800 })),
+    selectNumber: vi.fn(),
+    cycle: vi.fn(),
+    deselect: vi.fn(),
+    togglePause: vi.fn(),
   };
-  return { actions, input: createKeyboardInput(actions) };
+  const setEditorOpen = (value: boolean) => {
+    open = value;
+  };
+  return { actions, input: createKeyboardInput(actions), setEditorOpen };
 }
 
 function keyEvent(key: string, options: KeyboardEventInit = {}, type = 'keydown') {
@@ -137,7 +146,7 @@ describe('keyboard camera input', () => {
     expect(repeat.defaultPrevented).toBe(true);
   });
 
-  it.each(['Escape', 'q'])('leaves %s untouched', (key) => {
+  it.each(['q', 'Enter'])('leaves %s untouched', (key) => {
     const { actions, input } = setup();
     const event = keyEvent(key);
     input.handleKeyDown(event);
@@ -261,5 +270,163 @@ describe('keyboard camera input', () => {
     expect(keyDown).toHaveBeenCalledTimes(2);
     expect(keyUp).toHaveBeenCalledTimes(1);
     expect(releaseAll).toHaveBeenCalledTimes(1);
+  });
+
+  describe('agent selection keys (FR-029, US2-2…US2-5, US2-9)', () => {
+    it.each([1, 2, 3, 4, 5, 6, 7, 8, 9])('%i selects agent number %i', (n) => {
+      const { actions, input } = setup();
+      const event = keyEvent(String(n));
+      input.handleKeyDown(event);
+      expect(actions.selectNumber).toHaveBeenCalledWith(n);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('Tab cycles forward and Shift+Tab backward, preventing focus moves', () => {
+      const { actions, input } = setup();
+      const tab = keyEvent('Tab');
+      const back = keyEvent('Tab', { shiftKey: true });
+      input.handleKeyDown(tab);
+      input.handleKeyDown(back);
+      expect(actions.cycle.mock.calls).toEqual([[1], [-1]]);
+      expect(tab.defaultPrevented).toBe(true);
+      expect(back.defaultPrevented).toBe(true);
+    });
+
+    it('Escape deselects', () => {
+      const { actions, input } = setup();
+      const event = keyEvent('Escape');
+      input.handleKeyDown(event);
+      expect(actions.deselect).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('0 still recenters and is not an agent number', () => {
+      const { actions, input } = setup();
+      input.handleKeyDown(keyEvent('0'));
+      expect(actions.recenter).toHaveBeenCalledTimes(1);
+      expect(actions.selectNumber).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['<input>', 'input'],
+      ['<textarea></textarea>', 'textarea'],
+      ['<select></select>', 'select'],
+      ['<button>Editar</button>', 'button'],
+      ['<a href="#x">enlace</a>', 'a'],
+      ['<div contenteditable><span></span></div>', 'span'],
+    ])('keeps native behaviour with focus on %s', (markup, selector) => {
+      const { actions, input } = setup();
+      container.innerHTML = markup;
+      const target = container.querySelector(selector)!;
+      container.addEventListener('keydown', input.handleKeyDown);
+      for (const [key, options] of [
+        ['3', {}],
+        ['Tab', {}],
+        ['Tab', { shiftKey: true }],
+        ['Escape', {}],
+      ] as const) {
+        expect(target.dispatchEvent(keyEvent(key, options))).toBe(true);
+      }
+      expect(actions.selectNumber).not.toHaveBeenCalled();
+      expect(actions.cycle).not.toHaveBeenCalled();
+      expect(actions.deselect).not.toHaveBeenCalled();
+    });
+
+    it('001 shortcuts keep working with focus on a button or link (their rule is unchanged)', () => {
+      const { actions, input } = setup();
+      container.innerHTML = '<button>Recentrar</button><a href="#x">x</a>';
+      container.addEventListener('keydown', input.handleKeyDown);
+      container.querySelector('button')!.dispatchEvent(keyEvent('g'));
+      container.querySelector('a')!.dispatchEvent(keyEvent('0'));
+      expect(actions.toggleDebug).toHaveBeenCalledTimes(1);
+      expect(actions.recenter).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([{ ctrlKey: true }, { metaKey: true }, { altKey: true }])(
+      'ignores modified selection keys (%j)',
+      (modifier) => {
+        const { actions, input } = setup();
+        for (const key of ['3', 'Tab', 'Escape']) {
+          const event = keyEvent(key, modifier);
+          input.handleKeyDown(event);
+          expect(event.defaultPrevented).toBe(false);
+        }
+        expect(actions.selectNumber).not.toHaveBeenCalled();
+        expect(actions.cycle).not.toHaveBeenCalled();
+        expect(actions.deselect).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  describe('Space pauses the simulation (FR-020, US3-8)', () => {
+    it('toggles pause once per press and prevents page scrolling', () => {
+      const { actions, input } = setup();
+      const event = keyEvent(' ');
+      input.handleKeyDown(event);
+      input.handleKeyDown(keyEvent(' ', { repeat: true }));
+      expect(actions.togglePause).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it.each([
+      ['<input>', 'input'],
+      ['<textarea></textarea>', 'textarea'],
+      ['<select></select>', 'select'],
+      ['<button>Editar</button>', 'button'],
+      ['<a href="#x">enlace</a>', 'a'],
+      ['<div contenteditable></div>', 'div'],
+    ])('keeps native behaviour with focus on %s', (markup, selector) => {
+      const { actions, input } = setup();
+      container.innerHTML = markup;
+      const target = container.querySelector(selector)!;
+      container.addEventListener('keydown', input.handleKeyDown);
+      expect(target.dispatchEvent(keyEvent(' '))).toBe(true);
+      expect(actions.togglePause).not.toHaveBeenCalled();
+    });
+
+    it('ignores Space with a modifier', () => {
+      const { actions, input } = setup();
+      input.handleKeyDown(keyEvent(' ', { ctrlKey: true }));
+      expect(actions.togglePause).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('modal editor guard (FR-029, US2-9, US4-6)', () => {
+    it('no office shortcut acts while the editor is open, 001 ones included', () => {
+      const { actions, input } = setup({ editorOpen: true });
+      for (const [key, options] of [
+        ['ArrowRight', {}],
+        ['+', {}],
+        ['0', {}],
+        ['g', {}],
+        ['3', {}],
+        ['Tab', {}],
+        ['Tab', { shiftKey: true }],
+        ['Escape', {}],
+        [' ', {}],
+      ] as const) {
+        const event = keyEvent(key, options);
+        input.handleKeyDown(event);
+        expect(event.defaultPrevented, key).toBe(false);
+      }
+      input.tick(100);
+      for (const action of Object.values(actions)) {
+        if (action !== actions.isEditorOpen && action !== actions.getViewport) {
+          expect(action).not.toHaveBeenCalled();
+        }
+      }
+    });
+
+    it('a held pan key stops panning when the editor opens', () => {
+      const { actions, input, setEditorOpen } = setup();
+      input.handleKeyDown(keyEvent('ArrowRight'));
+      input.tick(100);
+      expect(actions.panBy).toHaveBeenCalledTimes(1);
+      setEditorOpen(true);
+      input.tick(100);
+      setEditorOpen(false);
+      input.tick(100);
+      expect(actions.panBy).toHaveBeenCalledTimes(1);
+    });
   });
 });

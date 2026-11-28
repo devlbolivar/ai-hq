@@ -15,3 +15,25 @@ export { footprint, isWalkable, reachableFrom, walkability } from './scene/walka
 export { drawOrder } from './scene/drawOrder';
 export { hitTest, silhouette } from './scene/hitTest';
 export { findPath } from './path/findPath';
+export * from './agents/stateMachine';
+export * from './agents/rng';
+export * from './agents/selection';
+export type * from './agents/types';
+export * from './agents/catalog';
+export * from './agents/prompt';
+export * from './agents/validate';
+export { marketingTeam } from './agents/seed';
+export {
+  CHARACTER_BODY,
+  characterSilhouette,
+  positionToWorld,
+  sceneHitTest,
+} from './scene/characterHit';
+export { sceneOrder } from './scene/sceneOrder';
+export type { CharacterPlacement, SceneHoverTarget, SceneItem } from './scene/sceneOrder';
+export * from './agents/usePoints';
+export * from './agents/movement';
+export * from './agents/autonomy';
+export * from './agents/simulation';
+export * from './agents/orders';
+export { centerOn } from './camera/follow';

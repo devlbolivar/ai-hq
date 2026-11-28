@@ -22,7 +22,8 @@ export function silhouette(obj: OfficeObject, tileSize: TileSize = DEFAULT_TILE)
   return [roofTop, { x: right.x, y: right.y - roofZ }, ...base, { x: left.x, y: left.y - roofZ }];
 }
 
-function containsPoint(polygon: Point[], point: Point): boolean {
+/** Point-in-convex-polygon for clockwise polygons, edges included. */
+export function containsPoint(polygon: Point[], point: Point): boolean {
   let previous = polygon[polygon.length - 1]!;
   return polygon.every((vertex) => {
     const cross =
