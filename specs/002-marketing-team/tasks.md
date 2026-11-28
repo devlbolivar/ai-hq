@@ -223,8 +223,8 @@ libre muestra el aviso; desactivar depuración devuelve la autonomía.
 - [x] T088 Refactor pass over `packages/domain/src/agents/`, `scene/`, `camera/` and the new web files with all tests green (`refactor:` commits)
 - [x] T089 Run `pnpm test:coverage` and add tests until thresholds pass (`packages/domain` ≥ 95 %, other packages ≥ 80 %)
 - [x] T090 Codex read-only review (`gpt-6.2-sol`) of `git diff main...HEAD`; verify each finding, fix the confirmed ones (TDD) and discard false positives
-- [ ] T091 Run the full quality gate `pnpm lint && pnpm typecheck && pnpm test && pnpm e2e --workers=3` and the isolated perf project
-- [ ] T092 Write `specs/002-marketing-team/validation.md` (template for the user's manual validation of quickstart.md scenarios 1–6, incl. SC-002, SC-007 and SC-008) and stop for the user
+- [x] T091 Run the full quality gate `pnpm lint && pnpm typecheck && pnpm test && pnpm e2e --workers=3` and the isolated perf project
+- [x] T092 Write `specs/002-marketing-team/validation.md` (template for the user's manual validation of quickstart.md scenarios 1–6, incl. SC-002, SC-007 and SC-008) and stop for the user
 
 ---
 

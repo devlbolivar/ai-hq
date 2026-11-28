@@ -87,11 +87,24 @@ seleccionado y los demás moviéndose.
 
 Referencia automatizada: `apps/web/e2e/perf.spec.ts` (Chromium headless con GPU) con los 6 agentes
 caminando (`test.patrol(true)`) y la cámara siguiendo al agente 1 durante 10 s (FR-035):
-RESULTADO_PERF.
+60–61 fps en las 10 muestras, con los 6 agentes en `walking` en
+cada muestra (quality gate de T091, ejecución aislada `--project=perf --no-deps`).
 
 ## Comprobación automática (T091)
 
-RESULTADO_GATE
+Ejecutada el 2026-11-28 sobre la rama `002-marketing-team`:
+
+| Comprobación | Resultado |
+| ------------ | --------- |
+| `pnpm lint` | sin errores |
+| `pnpm typecheck` | sin errores |
+| `pnpm test` | 813 tests en verde (62 archivos) |
+| `pnpm e2e --workers=3` | 61 tests en verde (incluye el proyecto `perf`) |
+| Perf aislado (`--project=perf --no-deps`) | SC-003 de la 001: 60–61 fps; FR-035: 60–61 fps con 6 agentes caminando |
+| `pnpm test:coverage` | 99,52 % de líneas en total; umbrales cumplidos (`packages/domain` ≥ 95 %) |
+
+Nota: en una ejecución con la máquina muy cargada (carga ≈ 8) cinco tests unitarios superaron su
+tiempo límite (ninguna aserción falló); repetida con la máquina normal, todo pasó.
 
 ## Incidencias encontradas
 
