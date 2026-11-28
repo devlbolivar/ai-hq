@@ -3,6 +3,7 @@ import { AgentPanel } from './ui/AgentPanel';
 import { DebugToggle } from './ui/DebugToggle';
 import { HoverLabel } from './ui/HoverLabel';
 import { PathStatus } from './ui/PathStatus';
+import { PauseIndicator } from './ui/PauseIndicator';
 import { RecenterButton } from './ui/RecenterButton';
 import { TeamPanel } from './ui/TeamPanel';
 
@@ -15,6 +16,7 @@ export function App() {
       <AgentPanel />
       <HoverLabel />
       <PathStatus />
+      <PauseIndicator />
       <DebugToggle />
       <RecenterButton />
     </main>

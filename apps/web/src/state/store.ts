@@ -90,6 +90,8 @@ export interface OfficeState {
    * after the followed agent (also while paused: it uses frame time).
    */
   tick(dtMs: number): void;
+  /** `Space`: pauses or resumes movement, animations and autonomy timers (FR-020). */
+  togglePause(): void;
   /** Selects an agent and starts following it (FR-026, FR-028). */
   select(agentId: string): void;
   deselect(): void;
@@ -232,6 +234,7 @@ export function createOfficeStore({
           : state,
       ),
     deselect: () => set({ selection: NO_SELECTION, follow: null }),
+    togglePause: () => set((state) => ({ paused: !state.paused })),
     selectNumber: (n) => {
       const { team, selection, select } = get();
       const id = selectByNumber(
