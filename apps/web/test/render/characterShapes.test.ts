@@ -11,6 +11,8 @@ import {
 } from '@ai-hq/domain';
 import {
   characterShapes,
+  frameIndex,
+  POSE_PERIOD_MS,
   POSES,
   type CharacterShape,
   type Pose,
@@ -133,6 +135,18 @@ describe('characterShapes (FR-021, FR-022, FR-024)', () => {
     const at = (t: number) =>
       JSON.stringify(parts(characterShapes(base, color, 'N', 'type', t), 'arm'));
     expect(at(0)).not.toBe(at(90));
+  });
+
+  it('sips: the cup rises and falls over the coffee cycle (FR-024, research R11)', () => {
+    const cupY = (t: number) => {
+      const cup = parts(characterShapes(base, color, 'E', 'coffee', t), 'cup')[0]!;
+      return cup.kind === 'rect' ? cup.y : NaN;
+    };
+    const half = POSE_PERIOD_MS.coffee / 2;
+    expect(Number.isFinite(POSE_PERIOD_MS.coffee)).toBe(true);
+    expect(cupY(half)).toBeLessThan(cupY(0));
+    expect(cupY(POSE_PERIOD_MS.coffee)).toBeCloseTo(cupY(0));
+    expect(frameIndex('coffee', half)).toBeGreaterThan(0);
   });
 
   it('holds a cup on a coffee break', () => {
