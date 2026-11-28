@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { marketingLayout, screenToGrid, tileCenter, worldToScreen } from '@ai-hq/domain';
+import {
+  agentPosition,
+  CHARACTER_BODY,
+  marketingLayout,
+  marketingTeam,
+  positionToWorld,
+  screenToGrid,
+  tileCenter,
+  worldToScreen,
+} from '@ai-hq/domain';
 import { createOfficeStore } from '../src/state/store';
 import { installTestHook, shouldExposeTestHook, type TestHookControls } from '../src/testHook';
 
@@ -41,7 +50,23 @@ describe('installTestHook', () => {
   it('exposes exactly the contract fields', () => {
     const { hook } = install();
     expect(Object.keys(hook).sort()).toEqual(
-      ['ready', 'layoutId', 'drawOrder', 'camera', 'hover', 'debug', 'fps', 'gridToScreen'].sort(),
+      [
+        'ready',
+        'layoutId',
+        'drawOrder',
+        'camera',
+        'hover',
+        'debug',
+        'fps',
+        'gridToScreen',
+        'sceneOrder',
+        'seed',
+        'simTimeMs',
+        'paused',
+        'agents',
+        'selection',
+        'agentToScreen',
+      ].sort(),
     );
     expect(hook.ready).toBe(false);
     expect(hook.layoutId).toBe('marketing');
@@ -91,9 +116,93 @@ describe('installTestHook', () => {
 
   it('publishes object child labels in container order when the scene is ready', () => {
     const { controls, hook } = install();
-    controls.markReady([{ label: 'desk-1' }, { label: 'wall-0-1' }]);
+    controls.markReady({ children: [{ label: 'desk-1' }, { label: 'wall-0-1' }] });
     expect(hook.ready).toBe(true);
     expect(hook.drawOrder).toEqual(['desk-1', 'wall-0-1']);
+  });
+
+  it('drawOrder keeps only objects while sceneOrder lists every child, live (fix #7)', () => {
+    const { controls, hook } = install();
+    const objects = {
+      children: [{ label: 'chair-1' }, { label: 'agent:copywriter' }, { label: 'desk-4' }],
+    };
+    controls.markReady(objects);
+    expect(hook.drawOrder).toEqual(['chair-1', 'desk-4']);
+    expect(hook.sceneOrder).toEqual(['chair-1', 'agent:copywriter', 'desk-4']);
+    // The container re-sorts as agents move: the hook reads its current order.
+    objects.children = [{ label: 'agent:copywriter' }, { label: 'chair-1' }, { label: 'desk-4' }];
+    expect(hook.sceneOrder).toEqual(['agent:copywriter', 'chair-1', 'desk-4']);
+    expect(hook.drawOrder).toEqual(['chair-1', 'desk-4']);
+  });
+
+  it('publishes seed, simulated time and pause from the store', () => {
+    const { store, hook } = install(createOfficeStore({ viewport, seed: 42, paused: true }));
+    expect(hook.seed).toBe(42);
+    expect(hook.paused).toBe(true);
+    expect(hook.simTimeMs).toBe(0);
+    store.getState().togglePause();
+    store.getState().tick(100);
+    expect(hook.paused).toBe(false);
+    expect(hook.simTimeMs).toBe(store.getState().sim.timeMs);
+    expect(hook.simTimeMs).toBeGreaterThan(0);
+  });
+
+  it('publishes each agent with profile and runtime fields (contracts/ui-contract.md)', () => {
+    const { store, hook } = install();
+    expect(hook.agents.map((a) => a.id)).toEqual(marketingTeam.map((a) => a.id));
+    const first = hook.agents[0]!;
+    const runtime = store.getState().sim.agents[0]!;
+    expect(first).toEqual({
+      id: 'head-of-marketing',
+      name: 'Head of Marketing',
+      role: 'Estratega',
+      color: 'coral',
+      number: 1,
+      status: runtime.status,
+      tile: runtime.tile,
+      position: agentPosition(runtime),
+      facing: runtime.facing,
+      forced: false,
+      reservation: runtime.reservation
+        ? `${runtime.reservation.objectId}#${runtime.reservation.index}`
+        : null,
+      celebrating: false,
+    });
+    expect(hook.agents.map((a) => a.number)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it('reflects edits and orders: name, forced, reservation key', () => {
+    const { store, hook } = install();
+    const { saveAgent, team } = store.getState();
+    const copy = team[2]!;
+    saveAgent(copy.id, { ...copy, name: 'Pluma' });
+    expect(hook.agents[2]!.name).toBe('Pluma');
+    store.getState().toggleDebug();
+    expect(store.getState().sendOrder(copy.id, { type: 'activity', activity: 'meeting' })).toEqual(
+      expect.objectContaining({ ok: true }),
+    );
+    const agent = hook.agents[2]!;
+    expect(agent.forced).toBe(true);
+    expect(agent.reservation).toMatch(/^meeting-table#\d+$/);
+  });
+
+  it('publishes the selection', () => {
+    const { store, hook } = install();
+    expect(hook.selection).toEqual({ agentId: null, following: false });
+    store.getState().select('designer');
+    expect(hook.selection).toEqual({ agentId: 'designer', following: true });
+  });
+
+  it('maps an agent to the screen center of its body', () => {
+    const { store, hook } = install();
+    store.setState({ camera: { offset: { x: 300, y: 90 }, zoom: 2 } });
+    const { camera, sim, layout } = store.getState();
+    const runtime = sim.agents[1]!;
+    const feet = positionToWorld(agentPosition(runtime), layout.tile);
+    expect(hook.agentToScreen(runtime.id)).toEqual(
+      worldToScreen(camera, { x: feet.x, y: feet.y - CHARACTER_BODY.height / 2 }),
+    );
+    expect(() => hook.agentToScreen('nobody')).toThrow();
   });
 
   it('reports fps as the frame count of the last second', () => {
