@@ -3,6 +3,7 @@ import { useStore } from 'zustand';
 import {
   advanceFrame,
   agentPosition,
+  applyDraft,
   centerOn,
   createSimulation,
   createSimWorld,
@@ -17,9 +18,12 @@ import {
   recenter,
   screenToWorld,
   selectByNumber,
+  validateAgentDraft,
   validateLayout,
   walkability,
   zoomAt,
+  type AgentDraft,
+  type AgentDraftErrors,
   type AgentProfile,
   type Camera,
   type Coord,
@@ -85,11 +89,22 @@ export interface OfficeState {
   readonly seed: number;
   readonly selection: Selection;
   readonly follow: FollowTransition | null;
+  /** Open editor dialog; while open no office shortcut or gesture acts (FR-029). */
+  readonly editor: { readonly agentId: string } | null;
   /**
    * One rendered frame of `dtMs`: advances the simulation (unless paused) and moves the camera
    * after the followed agent (also while paused: it uses frame time).
    */
   tick(dtMs: number): void;
+  /** Opens the editor of an agent and selects it (FR-033). */
+  openEditor(agentId: string): void;
+  /** Closes the editor without applying anything; the selection stays (FR-032). */
+  closeEditor(): void;
+  /**
+   * Saves the draft when valid (FR-030, FR-032): updates team and world at once, keeps the
+   * simulation and closes the editor. Returns the field errors (`{}` when saved).
+   */
+  saveAgent(agentId: string, draft: AgentDraft): AgentDraftErrors;
   /** `Space`: pauses or resumes movement, animations and autonomy timers (FR-020). */
   togglePause(): void;
   /** Selects an agent and starts following it (FR-026, FR-028). */
@@ -235,6 +250,21 @@ export function createOfficeStore({
       ),
     deselect: () => set({ selection: NO_SELECTION, follow: null }),
     togglePause: () => set((state) => ({ paused: !state.paused })),
+    editor: null,
+    openEditor: (agentId) => {
+      if (!get().team.some((a) => a.id === agentId)) return;
+      get().select(agentId);
+      set({ editor: { agentId } });
+    },
+    closeEditor: () => set({ editor: null }),
+    saveAgent: (agentId, draft) => {
+      const { team, world } = get();
+      const errors = validateAgentDraft(draft, team, agentId);
+      if (Object.keys(errors).length > 0) return errors;
+      const next = team.map((a) => (a.id === agentId ? applyDraft(a, draft) : a));
+      set({ team: next, world: { ...world, team: next }, editor: null });
+      return {};
+    },
     selectNumber: (n) => {
       const { team, selection, select } = get();
       const id = selectByNumber(
