@@ -102,3 +102,23 @@ describe('selection and following camera (FR-026–FR-028)', () => {
     expect(store.getState().cameraTouched).toBe(true);
   });
 });
+
+describe('re-selecting with the same number (FR-028, US2-7)', () => {
+  it('pressing the number of the selected agent resumes a stopped follow', () => {
+    const store = createOfficeStore({ viewport, seed: 1, paused: true });
+    store.getState().selectNumber(3);
+    store.getState().panBy({ x: 40, y: 0 });
+    expect(store.getState().selection).toEqual({ agentId: 'copywriter', following: false });
+    store.getState().selectNumber(3);
+    expect(store.getState().selection).toEqual({ agentId: 'copywriter', following: true });
+    expect(store.getState().follow).not.toBeNull();
+  });
+
+  it('pressing it again while following does not restart the transition', () => {
+    const store = createOfficeStore({ viewport, seed: 1, paused: true });
+    store.getState().selectNumber(3);
+    store.getState().tick(500);
+    store.getState().selectNumber(3);
+    expect(store.getState().follow).toBeNull();
+  });
+});
