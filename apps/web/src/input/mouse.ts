@@ -96,6 +96,8 @@ export function createMouseInput(actions: MouseActions, element?: Element): Mous
       press = { start: at, last: at, dragging: false };
     },
     handlePointerMove(event) {
+      // The editor opened mid-gesture: the press no longer acts behind the modal.
+      if (actions.isEditorOpen()) press = null;
       if (!press) return hover(event);
       const at = { x: event.clientX, y: event.clientY };
       if (!press.dragging) {
@@ -108,6 +110,7 @@ export function createMouseInput(actions: MouseActions, element?: Element): Mous
       hover(event);
     },
     handlePointerUp(event) {
+      if (actions.isEditorOpen()) press = null;
       if (press?.dragging) hover(event);
       const click = press !== null && !press.dragging;
       press = null;
