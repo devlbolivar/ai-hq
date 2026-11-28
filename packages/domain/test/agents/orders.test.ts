@@ -227,6 +227,42 @@ describe('applyOrder — idle and stopping (FR-014, FR-034 as amended)', () => {
     expect(stopped.timerMs).not.toBeNull();
   });
 
+  it("never stops on another agent's destination tile or on a still agent (edge cases)", () => {
+    const walker = runtime('designer', { x: 12, y: 9 }, null, {
+      status: 'walking',
+      next: { x: 11, y: 9 },
+      stepMs: 100,
+      route: [
+        { x: 10, y: 9 },
+        { x: 9, y: 9 },
+        { x: 8, y: 9 },
+      ],
+      forced: true,
+      target: { activity: null, tile: { x: 8, y: 9 }, usePoint: null, facing: null },
+    });
+    const wanderer = runtime('scriptwriter', { x: 11, y: 6 }, null, {
+      status: 'walking',
+      next: { x: 11, y: 7 },
+      route: [
+        { x: 11, y: 8 },
+        { x: 11, y: 9 },
+      ],
+      target: { activity: 'wander', tile: { x: 11, y: 9 }, usePoint: null, facing: null },
+    });
+    const standing = runtime('copywriter', { x: 10, y: 9 });
+    const { sim } = applyOrder(simOf([walker, wanderer, standing]), world, 'designer', {
+      type: 'idle',
+    });
+    expect(sim.agents[0]).toMatchObject({
+      route: [
+        { x: 10, y: 9 },
+        { x: 9, y: 9 },
+      ],
+      target: null,
+      forced: false,
+    });
+  });
+
   it('keeps the reservation when it stops on its own point and releases it otherwise', () => {
     const toCoffee = runtime('copywriter', { x: 13, y: 8 }, coffee, {
       status: 'walking',
