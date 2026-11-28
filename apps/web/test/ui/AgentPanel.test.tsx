@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { createOfficeStore } from '../../src/state/store';
 import { AgentPanel } from '../../src/ui/AgentPanel';
 
@@ -42,5 +42,35 @@ describe('AgentPanel — edit button', () => {
     act(() => store.getState().select('copywriter'));
     await userEvent.click(screen.getByRole('button', { name: 'Editar' }));
     expect(store.getState().editor).toEqual({ agentId: 'copywriter' });
+  });
+});
+
+describe('AgentPanel — debug orders (FR-034, US5-5)', () => {
+  it('offers no orders while debug mode is off', () => {
+    const store = createOfficeStore({ viewport, paused: true });
+    render(<AgentPanel store={store} />);
+    act(() => store.getState().select('copywriter'));
+    expect(screen.queryByRole('group', { name: 'Órdenes de depuración' })).toBeNull();
+  });
+
+  it.each([
+    ['Trabajar', { type: 'activity', activity: 'work' }],
+    ['Reunión', { type: 'activity', activity: 'meeting' }],
+    ['Descanso', { type: 'activity', activity: 'break' }],
+    ['Entregar a revisión', { type: 'activity', activity: 'review' }],
+    ['Volver a idle', { type: 'idle' }],
+  ] as const)('"%s" sends the matching order', async (label, order) => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const store = createOfficeStore({ viewport, paused: true });
+    const sent: unknown[] = [];
+    store.setState({ sendOrder: (agentId, o) => (sent.push([agentId, o]), null) });
+    render(<AgentPanel store={store} />);
+    act(() => {
+      store.getState().select('copywriter');
+      store.getState().toggleDebug();
+    });
+    const group = screen.getByRole('group', { name: 'Órdenes de depuración' });
+    await userEvent.click(within(group).getByRole('button', { name: label }));
+    expect(sent).toEqual([['copywriter', order]]);
   });
 });
