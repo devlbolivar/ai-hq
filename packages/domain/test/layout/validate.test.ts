@@ -33,6 +33,39 @@ describe('validateLayout (FR-008, FR-009b)', () => {
     expect(validateLayout(marketingLayout)).toEqual({ ok: true });
   });
 
+  it.each([
+    { origin: { x: 10.5, y: 2 } },
+    { origin: { x: 10, y: 2.5 } },
+    { size: { w: 0, h: 1 } },
+    { size: { w: 1, h: -1 } },
+    { size: { w: 1.5, h: 1 } },
+    { size: { w: 1, h: 1.5 } },
+  ])('rejects invalid blocking object geometry %o', (patch) => {
+    const obj = makeObject({ id: 'invalid', ...patch });
+    expect(only(addObjects(marketingLayout, obj), 'INVALID_GEOMETRY').objectId).toBe(obj.id);
+  });
+
+  it('reports fractional entrance and use point coordinates and invalid zone geometry', () => {
+    const tile = { x: 2, y: 3.5 };
+    const layout = patchObject(marketingLayout, 'sofa', (o) => ({
+      ...o,
+      usePoints: [{ tile, facing: 'N' }],
+    }));
+    const zone = layout.zones[0]!;
+    const errors = errorsOf({
+      ...layout,
+      entrance: tile,
+      zones: [
+        { ...zone, area: { ...zone.area, origin: tile } },
+        { ...zone, id: 'empty', area: { ...zone.area, size: { w: 0, h: 1 } } },
+      ],
+    });
+    expect(errors.map(({ code }) => code)).toEqual(Array(4).fill('INVALID_GEOMETRY'));
+    expect(errors.map(({ objectId }) => objectId)).toEqual(
+      expect.arrayContaining(['sofa', zone.id, 'empty', undefined]),
+    );
+  });
+
   it('OUT_OF_BOUNDS: object footprint outside the grid', () => {
     const e = only(
       addObjects(
@@ -84,6 +117,12 @@ describe('validateLayout (FR-008, FR-009b)', () => {
     expect(only(layout, 'DUPLICATE_ID').objectId).toBe('desks');
   });
 
+  it('reports both duplicate ID and overlap for coincident blocking objects', () => {
+    const plant = marketingLayout.objects.find((o) => o.id === 'plant-1')!;
+    const errors = errorsOf(addObjects(marketingLayout, { ...plant }));
+    expect(errors.map((e) => e.code).sort()).toEqual(['BLOCKING_OVERLAP', 'DUPLICATE_ID']);
+  });
+
   it('BLOCKING_OVERLAP: two blocking objects share a tile', () => {
     const e = only(
       addObjects(marketingLayout, makeObject({ id: 'plant-x', origin: { x: 3, y: 5 } })),
@@ -130,6 +169,15 @@ describe('validateLayout (FR-008, FR-009b)', () => {
     expect(e.objectId).toBe('coffee-machine');
     expect(e.tile).toEqual({ x: 15, y: 1 });
   });
+
+  it.each(['meeting-table', 'coffee-machine', 'sofa', 'whiteboard'])(
+    'requires at least one use point for %s',
+    (kind) => {
+      const obj = marketingLayout.objects.find((o) => o.kind === kind)!;
+      const layout = patchObject(marketingLayout, obj.id, (o) => ({ ...o, usePoints: [] }));
+      expect(only(layout, 'MISSING_USE_POINT').objectId).toBe(obj.id);
+    },
+  );
 
   it('MISSING_NETWORK: screen without network', () => {
     const layout = patchObject(marketingLayout, 'screen-x', ({ network: _n, ...rest }) => rest);

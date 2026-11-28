@@ -207,6 +207,30 @@ describe('keyboard camera input', () => {
     expect(actions.panBy).not.toHaveBeenCalled();
   });
 
+  it.each(['input', 'textarea', 'select', '[contenteditable] span'])(
+    'releases held directions when focus enters %s until detached',
+    (selector) => {
+      const { actions, input } = setup();
+      container.innerHTML =
+        '<input><textarea></textarea><select></select><div contenteditable><span></span></div>';
+      const field = container.querySelector(selector)!;
+      const detach = attachKeyboard(window, input);
+      try {
+        container.dispatchEvent(keyEvent('w'));
+        container.dispatchEvent(keyEvent('d'));
+        field.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+        input.tick(100);
+        expect(actions.panBy).not.toHaveBeenCalled();
+      } finally {
+        detach();
+      }
+      input.handleKeyDown(keyEvent('w'));
+      field.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      input.tick(100);
+      expect(actions.panBy).toHaveBeenCalledWith({ x: 0, y: 60 });
+    },
+  );
+
   it('wires keydown, keyup and blur on the window and detaches all three', () => {
     const { actions, input } = setup();
     const keyDown = vi.spyOn(input, 'handleKeyDown');

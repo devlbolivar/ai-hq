@@ -89,11 +89,11 @@ describe('installTestHook', () => {
     expect(hook.debug).toEqual({ enabled: false, from: null, to: null, result: null });
   });
 
-  it('marks the scene ready with its draw order', () => {
+  it('publishes object child labels in container order when the scene is ready', () => {
     const { controls, hook } = install();
-    controls.markReady(['wall-0-1', 'desk-1']);
+    controls.markReady([{ label: 'desk-1' }, { label: 'wall-0-1' }]);
     expect(hook.ready).toBe(true);
-    expect(hook.drawOrder).toEqual(['wall-0-1', 'desk-1']);
+    expect(hook.drawOrder).toEqual(['desk-1', 'wall-0-1']);
   });
 
   it('reports fps as the frame count of the last second', () => {
