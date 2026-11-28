@@ -12,6 +12,7 @@ function setup() {
     selectNumber: vi.fn(),
     cycle: vi.fn(),
     deselect: vi.fn(),
+    togglePause: vi.fn(),
   };
   return { actions, input: createKeyboardInput(actions) };
 }
@@ -350,5 +351,38 @@ describe('keyboard camera input', () => {
         expect(actions.deselect).not.toHaveBeenCalled();
       },
     );
+  });
+
+  describe('Space pauses the simulation (FR-020, US3-8)', () => {
+    it('toggles pause once per press and prevents page scrolling', () => {
+      const { actions, input } = setup();
+      const event = keyEvent(' ');
+      input.handleKeyDown(event);
+      input.handleKeyDown(keyEvent(' ', { repeat: true }));
+      expect(actions.togglePause).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it.each([
+      ['<input>', 'input'],
+      ['<textarea></textarea>', 'textarea'],
+      ['<select></select>', 'select'],
+      ['<button>Editar</button>', 'button'],
+      ['<a href="#x">enlace</a>', 'a'],
+      ['<div contenteditable></div>', 'div'],
+    ])('keeps native behaviour with focus on %s', (markup, selector) => {
+      const { actions, input } = setup();
+      container.innerHTML = markup;
+      const target = container.querySelector(selector)!;
+      container.addEventListener('keydown', input.handleKeyDown);
+      expect(target.dispatchEvent(keyEvent(' '))).toBe(true);
+      expect(actions.togglePause).not.toHaveBeenCalled();
+    });
+
+    it('ignores Space with a modifier', () => {
+      const { actions, input } = setup();
+      input.handleKeyDown(keyEvent(' ', { ctrlKey: true }));
+      expect(actions.togglePause).not.toHaveBeenCalled();
+    });
   });
 });
