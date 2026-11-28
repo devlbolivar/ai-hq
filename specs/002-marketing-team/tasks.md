@@ -169,7 +169,7 @@ congela y reanuda; misma semilla → misma secuencia (dominio).
 - [x] T067 [US3] RED→GREEN: pause — store tests (`togglePause`; `tick` frozen; animation time is `sim.timeMs`) in `apps/web/test/state/agents.test.ts`, keyboard `Space` (same focus rules as T056) in `apps/web/test/input/keyboard.test.ts`, and `apps/web/test/ui/PauseIndicator.test.tsx` (status "Simulación en pausa"); implement in `store.ts`, `keyboard.ts`, `apps/web/src/ui/PauseIndicator.tsx` (FR-020, US3-8)
 - [x] T068 [US3] RED: pose mapping tests in `apps/web/test/render/pose.test.ts` — `poseFor(runtime)`: `walking` → walk, `working` → type (celebrate while `celebrateMs > 0`), `break` → coffee (standing at the coffee machine, sitting on the sofa), `idle`/`meeting`/`waiting_review` → idle breathing; facing from `AgentRuntime.facing` (FR-013, FR-024)
 - [x] T069 [US3] GREEN: implement `apps/web/src/render/character/pose.ts` and use it in `character/pixi.ts` with `t = sim.timeMs`
-- [ ] T070 [US3] E2E `apps/web/e2e/autonomy.spec.ts` with `?seed=<ACCEPTANCE_SEED>` — within 15 s at least one agent leaves its desk and reaches an activity or tile; positions are always walkable tiles or segments between neighbors; `Space` freezes `simTimeMs` and positions for 1 s and resumes from the same values (US3-1, US3-2, US3-8)
+- [x] T070 [US3] E2E `apps/web/e2e/autonomy.spec.ts` with `?seed=<ACCEPTANCE_SEED>` — within 15 s at least one agent leaves its desk and reaches an activity or tile; positions are always walkable tiles or segments between neighbors; `Space` freezes `simTimeMs` and positions for 1 s and resumes from the same values (US3-1, US3-2, US3-8)
 
 **Checkpoint**: US3 funciona; US1–US2 siguen verdes
 
