@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
-import type { HoverTarget } from '@ai-hq/domain';
+import type { SceneHoverTarget } from '@ai-hq/domain';
 import { createOfficeStore } from '../../src/state/store';
 import { HoverLabel } from '../../src/ui/HoverLabel';
 
 afterEach(cleanup);
 
-function renderLabel(hover: HoverTarget) {
+function renderLabel(hover: SceneHoverTarget) {
   const store = createOfficeStore({ viewport: { width: 800, height: 600 } });
   store.setState({ hover });
   render(<HoverLabel store={store} />);
@@ -39,6 +39,23 @@ describe('HoverLabel', () => {
     expect(screen.getByRole('status', { name: 'Planta' }).textContent).toBe('Planta');
 
     act(() => store.setState({ hover: null }));
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('shows the agent name while hovering a character (US1-6)', () => {
+    const store = renderLabel({ type: 'agent', id: 'trend-scout' });
+    expect(screen.getByRole('status', { name: 'Trend Scout' }).textContent).toBe('Trend Scout');
+
+    // An edited name shows at once.
+    act(() => {
+      const scout = store.getState().team[1]!;
+      store.getState().saveAgent(scout.id, { ...scout, name: 'Radar' });
+    });
+    expect(screen.getByRole('status', { name: 'Radar' })).toBeTruthy();
+  });
+
+  it('hides the status for an unknown agent', () => {
+    renderLabel({ type: 'agent', id: 'nobody' });
     expect(screen.queryByRole('status')).toBeNull();
   });
 });
