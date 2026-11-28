@@ -26,6 +26,7 @@ import { drawFloor } from './drawFloor';
 import { drawDebugOverlay } from './drawDebugOverlay';
 import { drawObject } from './drawObject';
 import { drawOverlay } from './drawOverlay';
+import { drawRing } from './drawRing';
 import { theme } from './palette';
 
 /** Gap between the top of the body and the bubble tail (px at zoom 1). */
@@ -112,11 +113,15 @@ function updateAgents(scene: Scene, state: OfficeState): void {
     const views = scene.agents.get(placement.id);
     if (!agent || !profile || !views) continue;
     const { pose, seated } = poseFor(agent, layout);
+    const selected = selection.agentId === agent.id;
+    const color = agentColorHex(profile.color);
+    // Ring in the agent color under the selected one only (FR-027).
+    drawRing(views.character.ring, selected ? color : null);
     updateCharacterView(
       views.character,
       {
         appearance: profile.appearance,
-        color: agentColorHex(profile.color),
+        color,
         position: placement.position,
         facing: agent.facing,
         pose,
@@ -127,7 +132,7 @@ function updateAgents(scene: Scene, state: OfficeState): void {
     );
     const feet = positionToWorld(placement.position, layout.tile);
     views.bubble.root.position.set(feet.x, feet.y - CHARACTER_BODY.height - BUBBLE_GAP);
-    updateBubbleView(views.bubble, bubbleSpec(agent.status, selection.agentId === agent.id));
+    updateBubbleView(views.bubble, bubbleSpec(agent.status, selected));
   }
 }
 

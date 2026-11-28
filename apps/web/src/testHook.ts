@@ -55,6 +55,8 @@ export interface AIHQTestHook {
   readonly selection: Selection;
   /** Screen position of the tile **center** (never the top vertex shared by 4 tiles). */
   gridToScreen(tile: Coord): Point;
+  /** Agent whose selection ring is drawn (visible), or null (FR-027). */
+  readonly ringFor: string | null;
   /** Screen position of the center of an agent's body. */
   agentToScreen(id: string): Point;
   readonly test: {
@@ -75,9 +77,15 @@ export interface TestHookEnv {
 }
 
 /** Writable side of the hook, used by the renderer. */
+interface LabeledNode {
+  readonly label: string;
+  readonly visible?: boolean;
+  readonly children?: readonly LabeledNode[];
+}
+
 /** The `objects` container, read live: it re-sorts as agents move. */
 export interface LabeledChildren {
-  readonly children: readonly { readonly label: string }[];
+  readonly children: readonly LabeledNode[];
 }
 
 export interface TestHookControls {
@@ -209,6 +217,14 @@ export function installTestHook(
     },
     get selection(): Selection {
       return store.getState().selection;
+    },
+    get ringFor() {
+      const ringed = objects.children.find(
+        (child) =>
+          child.label.startsWith('agent:') &&
+          child.children?.some((part) => part.label === 'ring' && part.visible === true),
+      );
+      return ringed ? ringed.label.slice('agent:'.length) : null;
     },
     gridToScreen(tile: Coord): Point {
       const { camera, layout } = store.getState();
