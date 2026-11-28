@@ -75,6 +75,7 @@ describe('installTestHook', () => {
         'selection',
         'agentToScreen',
         'test',
+        'ringFor',
       ].sort(),
     );
     expect(hook.ready).toBe(false);
@@ -308,6 +309,22 @@ describe('installTestHook', () => {
     const agent = hook.agents[2]!;
     expect(agent.forced).toBe(true);
     expect(agent.reservation).toMatch(/^meeting-table#\d+$/);
+  });
+
+  it('ringFor is the agent whose drawn ring is visible (FR-027)', () => {
+    const { controls, hook } = install();
+    const agent = (id: string, ring: boolean) => ({
+      label: `agent:${id}`,
+      children: [
+        { label: 'ring', visible: ring },
+        { label: 'figure', visible: true },
+      ],
+    });
+    const objects = { children: [{ label: 'desk-1' }, agent('copywriter', false)] };
+    controls.markReady(objects);
+    expect(hook.ringFor).toBeNull();
+    objects.children = [{ label: 'desk-1' }, agent('copywriter', false), agent('designer', true)];
+    expect(hook.ringFor).toBe('designer');
   });
 
   it('publishes the selection', () => {
