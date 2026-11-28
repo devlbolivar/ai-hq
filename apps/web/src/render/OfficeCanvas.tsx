@@ -8,7 +8,6 @@ import {
   sceneOrder,
   ZOOM_MAX,
   type Camera,
-  type Coord,
   type Point,
 } from '@ai-hq/domain';
 import { attachKeyboard, createKeyboardInput } from '../input/keyboard';
@@ -144,23 +143,23 @@ function attachInput(app: Application, host: HTMLElement, store: OfficeStore): (
     pointerMove: (screenPoint: Point) => store.getState().pointerMove(screenPoint),
     pointerLeave: () => store.getState().pointerLeave(),
   };
-  const debug = {
-    toggleDebug: () => store.getState().toggleDebug(),
-    isDebugEnabled: () => store.getState().debug.enabled,
-    getCamera: () => store.getState().camera,
-    getLayout: () => store.getState().layout,
-    selectTile: (tile: Coord) => store.getState().selectTile(tile),
-  };
   const detachMouse = attachMouse(
     host,
-    createMouseInput({ ...camera, ...pointer, ...debug }, host),
+    createMouseInput(
+      { ...camera, ...pointer, clickAt: (at: Point) => store.getState().clickAt(at) },
+      host,
+    ),
   );
   const selection = {
     selectNumber: (n: number) => store.getState().selectNumber(n),
     cycle: (direction: 1 | -1) => store.getState().cycle(direction),
     deselect: () => store.getState().deselect(),
   };
-  const keyboard = createKeyboardInput({ ...camera, ...debug, ...selection });
+  const keyboard = createKeyboardInput({
+    ...camera,
+    ...selection,
+    toggleDebug: () => store.getState().toggleDebug(),
+  });
   const detachKeyboard = attachKeyboard(window, keyboard);
   const tick = (ticker: Ticker) => keyboard.tick(ticker.deltaMS);
   app.ticker.add(tick);

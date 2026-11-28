@@ -1,27 +1,14 @@
-import {
-  screenToGrid,
-  ZOOM_STEP,
-  type Camera,
-  type Coord,
-  type OfficeLayout,
-  type Point,
-} from '@ai-hq/domain';
+import { ZOOM_STEP, type Point } from '@ai-hq/domain';
 
-/**
- * Store actions the mouse drives: camera (drag, wheel), hover (move, leave) and, in debug mode,
- * tile picking (click).
- */
+/** Store actions the mouse drives: camera (drag, wheel), hover (move, leave) and clicks. */
 export interface MouseActions {
   panBy(delta: Point): void;
   zoomAt(anchor: Point, factor: number): void;
   /** Pointer position relative to the canvas host. */
   pointerMove(screenPoint: Point): void;
   pointerLeave(): void;
-  isDebugEnabled(): boolean;
-  getCamera(): Camera;
-  getLayout(): OfficeLayout;
-  /** A tile clicked in debug mode (FR-023). */
-  selectTile(tile: Coord): void;
+  /** A click without drag at a host-relative point: the store decides what it picks (FR-026). */
+  clickAt(screenPoint: Point): void;
 }
 
 /** The fields of a `PointerEvent` the mouse input reads. */
@@ -70,8 +57,8 @@ function wheelNotches({ deltaY, deltaMode }: WheelInfo): number {
 }
 
 /**
- * Translates pointer and wheel events into camera, hover and debug-picking actions. `element` is the canvas host;
- * wheel anchors and hover points are made relative to it.
+ * Translates pointer and wheel events into camera, hover and click actions. `element` is the
+ * canvas host; wheel anchors, hover and click points are made relative to it.
  */
 export function createMouseInput(actions: MouseActions, element?: Element): MouseInput {
   let press: { start: Point; last: Point; dragging: boolean } | null = null;
@@ -121,10 +108,7 @@ export function createMouseInput(actions: MouseActions, element?: Element): Mous
       if (press?.dragging) hover(event);
       const click = press !== null && !press.dragging;
       press = null;
-      if (!click || !actions.isDebugEnabled()) return;
-      const at = relative(event.clientX, event.clientY);
-      const tile = screenToGrid(actions.getCamera(), at, actions.getLayout());
-      if (tile) actions.selectTile(tile);
+      if (click) actions.clickAt(relative(event.clientX, event.clientY));
     },
     handlePointerCancel() {
       press = null;

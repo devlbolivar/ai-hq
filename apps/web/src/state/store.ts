@@ -18,6 +18,7 @@ import {
   positionToWorld,
   recenter,
   sceneHitTest,
+  screenToGrid,
   screenToWorld,
   selectByNumber,
   validateAgentDraft,
@@ -159,6 +160,11 @@ export interface OfficeState {
    * the next pick starts over with a new origin. Ignored while debug mode is off.
    */
   selectTile(tile: Coord): void;
+  /**
+   * A click without drag at a canvas-host point (FR-026): a character is selected (also in debug
+   * mode); elsewhere, debug mode picks the floor tile keeping the selection, otherwise deselects.
+   */
+  clickAt(screenPoint: Point): void;
 }
 
 function sameHover(a: SceneHoverTarget, b: SceneHoverTarget): boolean {
@@ -411,6 +417,16 @@ export function createOfficeStore({
       ),
     selectTile: (tile) =>
       set((state) => (state.debug.enabled ? { debug: nextDebug(state.debug, tile) } : state)),
+    clickAt: (screenPoint) => {
+      const { camera, layout, sim, debug, select, selectTile, deselect } = get();
+      const world = screenToWorld(camera, screenPoint);
+      const hit = sceneHitTest(world, layout, characterPlacements(sim));
+      if (hit?.type === 'agent') return select(hit.id);
+      if (!debug.enabled) return deselect();
+      // Debug picks on the floor plane, as in the 001 (an object's tile, e.g. a desk, too).
+      const tile = screenToGrid(camera, screenPoint, layout);
+      if (tile) selectTile(tile);
+    },
   }));
 }
 
