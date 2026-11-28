@@ -40,6 +40,9 @@ test.describe('US1 — ver la oficina de Marketing (FR-001, FR-011, FR-012, SC-0
     const hook = await readHook(page);
     expect(hook.ready).toBe(true);
     expect(hook.layoutId).toBe('marketing');
+    const layoutIds = marketingLayout.objects.map((object) => object.id);
+    expect(hook.drawOrder).toHaveLength(layoutIds.length);
+    expect(new Set(hook.drawOrder)).toEqual(new Set(layoutIds));
     expect(hook.drawOrder).toEqual(drawOrder(marketingLayout));
   });
 

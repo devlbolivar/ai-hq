@@ -34,7 +34,7 @@ export interface TestHookEnv {
 
 /** Writable side of the hook, used by the renderer. */
 export interface TestHookControls {
-  markReady(drawOrder: readonly string[]): void;
+  markReady(children: readonly { readonly label: string }[]): void;
   /** Call once per rendered frame with a monotonic timestamp in ms. */
   recordFrame(now: number): void;
   dispose(): void;
@@ -89,8 +89,8 @@ export function installTestHook(
   target.__AIHQ__ = hook;
 
   return {
-    markReady(drawOrder) {
-      order = Object.freeze([...drawOrder]);
+    markReady(children) {
+      order = Object.freeze(children.map((child) => child.label));
       ready = true;
     },
     recordFrame(now) {

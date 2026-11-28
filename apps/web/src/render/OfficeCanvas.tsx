@@ -13,7 +13,7 @@ import { theme } from './palette';
 
 interface Scene {
   readonly root: Container;
-  readonly order: string[];
+  readonly objects: Container;
   /** Hover highlight, redrawn when `hover` changes. */
   readonly highlight: Graphics;
   /** Debug overlay (walkable grid, entrance, use points, route), under the hover highlight. */
@@ -42,7 +42,7 @@ function buildScene(store: OfficeStore): Scene {
   const highlight = new Graphics({ label: 'hover' });
   overlay.addChild(debugLayer, highlight);
   root.addChild(floor, objects, overlay);
-  return { root, order, highlight, debugLayer };
+  return { root, objects, highlight, debugLayer };
 }
 
 /** Mouse and keyboard drive the camera and hover through the store; returns a detach function. */
@@ -118,7 +118,7 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
         }
         host.appendChild(app.canvas);
 
-        const { root, order, highlight, debugLayer } = buildScene(store);
+        const { root, objects, highlight, debugLayer } = buildScene(store);
         app.stage.addChild(root);
         const initial = store.getState();
         applyCamera(root, initial.camera);
@@ -138,7 +138,7 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
         detachInput = attachInput(app, host, store);
         app.ticker.add(() => hook?.recordFrame(performance.now()));
         app.render();
-        hook?.markReady(order);
+        hook?.markReady(objects.children);
       })
       .catch((error: unknown) => {
         console.error('No se pudo iniciar el render de la oficina', error);

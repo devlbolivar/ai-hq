@@ -39,7 +39,7 @@ nuevos en `packages/domain/test/agents/`, `test/scene/` y `test/camera/`.
 **Purpose**: soporte de tests para el diálogo modal y base de código con el fix de la 001
 
 - [x] T001 RED→GREEN: add `apps/web/test/setup.ts` with a minimal `HTMLDialogElement.prototype.showModal`/`close` stub (sets/clears `open`, dispatches `close`) and register it as `setupFiles` of the `web` project in `vitest.config.ts`; test first in `apps/web/test/setup.test.ts` (a `<dialog>` opens with `showModal()` and closes with `close()`) (research R14)
-- [ ] T002 Merge `main` into `002-marketing-team` once the user has merged the `fix/001-review` PR; run `pnpm test` (validateLayout now has `MISSING_USE_POINT` and `INVALID_GEOMETRY`). BLOQUEA las tareas que tocan `store.ts`, `mouse.ts`, `keyboard.ts`, `OfficeCanvas.tsx`, `testHook.ts`, `HoverLabel.tsx` o `e2e/scene.spec.ts` (research R15); no bloquea el dominio ni los archivos nuevos de la web
+- [x] T002 Merge `main` into `002-marketing-team` once the user has merged the `fix/001-review` PR; run `pnpm test` (validateLayout now has `MISSING_USE_POINT` and `INVALID_GEOMETRY`). BLOQUEA las tareas que tocan `store.ts`, `mouse.ts`, `keyboard.ts`, `OfficeCanvas.tsx`, `testHook.ts`, `HoverLabel.tsx` o `e2e/scene.spec.ts` (research R15); no bloquea el dominio ni los archivos nuevos de la web
 
 ---
 

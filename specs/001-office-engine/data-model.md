@@ -75,6 +75,7 @@ Devuelve `{ ok: true }` o `{ ok: false; errors: LayoutError[] }`, con
 
 | `code` | Condición |
 |---|---|
+| `INVALID_GEOMETRY` | coordenadas no enteras (objeto, zona, entrada o punto de uso) o tamaño `w`/`h` no entero o < 1 |
 | `OUT_OF_BOUNDS` | huella de un objeto, zona o entrada fuera de la cuadrícula |
 | `DUPLICATE_ID` | dos objetos o zonas con el mismo id |
 | `BLOCKING_OVERLAP` | dos objetos que bloquean comparten un tile |
@@ -82,6 +83,7 @@ Devuelve `{ ok: true }` o `{ ok: false; errors: LayoutError[] }`, con
 | `USE_POINT_BLOCKED` | un punto de uso cae en un tile no caminable |
 | `USE_POINT_UNREACHABLE` | no hay ruta desde la entrada hasta un punto de uso |
 | `MISSING_NETWORK` | una pantalla sin `network` |
+| `MISSING_USE_POINT` | una mesa de reuniones, cafetera, sofá o pizarra sin ningún punto de uso (FR-009a) |
 | `DESK_USE_POINT` | un escritorio sin exactamente un punto de uso sobre su silla |
 | `BAD_ATTACHMENT` | `attachedTo` apunta a un id inexistente |
 
