@@ -76,6 +76,7 @@ describe('installTestHook', () => {
         'agentToScreen',
         'test',
         'ringFor',
+        'editorOpen',
       ].sort(),
     );
     expect(hook.ready).toBe(false);
@@ -347,6 +348,15 @@ describe('installTestHook', () => {
     expect(hook.ringFor).toBeNull();
     objects.children = [{ label: 'desk-1' }, agent('copywriter', false), agent('designer', true)];
     expect(hook.ringFor).toBe('designer');
+  });
+
+  it('editorOpen follows the editor dialog state', () => {
+    const { store, hook } = install();
+    expect(hook.editorOpen).toBe(false);
+    store.getState().openEditor('copywriter');
+    expect(hook.editorOpen).toBe(true);
+    store.getState().closeEditor();
+    expect(hook.editorOpen).toBe(false);
   });
 
   it('publishes the selection', () => {
