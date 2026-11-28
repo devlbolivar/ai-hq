@@ -124,6 +124,11 @@ function accessoryShapes(
 }
 
 /** Arm rectangles for a pose; `phase` animates over simulated time. */
+/** Cup lift in px over the coffee cycle: rests, rises to the mouth and comes back down. */
+function sip(t: number): number {
+  return ((1 - Math.cos((t / POSE_PERIOD_MS.coffee) * 2 * Math.PI)) / 2) * 4;
+}
+
 function armShapes(pose: Pose, color: number, lift: number, t: number): CharacterShape[] {
   const fill = shade(color, 0.85);
   switch (pose) {
@@ -137,7 +142,10 @@ function armShapes(pose: Pose, color: number, lift: number, t: number): Characte
       ];
     }
     case 'coffee':
-      return [rect('arm', fill, -10, -29 - lift, 3, 12), rect('arm', fill, 7, -33 - lift, 3, 8)];
+      return [
+        rect('arm', fill, -10, -29 - lift, 3, 12),
+        rect('arm', fill, 7, -33 - lift - sip(t), 3, 8),
+      ];
     case 'walk': {
       const swing = Math.sin((t / 250) * Math.PI) * 2;
       return [
@@ -199,16 +207,16 @@ export function characterShapes(
     shapes.push(ellipse('head', skin, dx * 6, headY + 1, 1.3, 1.8));
   }
   shapes.push(...accessoryShapes(appearance.accessory, color, headY, facing));
-  if (pose === 'coffee') shapes.push(rect('cup', CUP, dx > 0 ? 7 : -10, -36 - lift, 3, 4));
+  if (pose === 'coffee') shapes.push(rect('cup', CUP, dx > 0 ? 7 : -10, -36 - lift - sip(t), 3, 4));
   return shapes;
 }
 
-/** Length of each pose's animation cycle in simulated ms (`coffee` is static). */
+/** Length of each pose's animation cycle in simulated ms. */
 export const POSE_PERIOD_MS: Readonly<Record<Pose, number>> = {
   idle: 1200,
   walk: 500,
   type: 2 * Math.PI * 45,
-  coffee: Infinity,
+  coffee: 2400,
   celebrate: 500,
 };
 
