@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ZOOM_STEP } from '@ai-hq/domain';
 import { attachKeyboard, createKeyboardInput, KEY_PAN_SPEED } from '../../src/input/keyboard';
 
-function setup() {
+function setup({ editorOpen = false } = {}) {
+  let open = editorOpen;
   const actions = {
+    isEditorOpen: vi.fn(() => open),
     panBy: vi.fn(),
     zoomAt: vi.fn(),
     recenter: vi.fn(),
@@ -14,7 +16,10 @@ function setup() {
     deselect: vi.fn(),
     togglePause: vi.fn(),
   };
-  return { actions, input: createKeyboardInput(actions) };
+  const setEditorOpen = (value: boolean) => {
+    open = value;
+  };
+  return { actions, input: createKeyboardInput(actions), setEditorOpen };
 }
 
 function keyEvent(key: string, options: KeyboardEventInit = {}, type = 'keydown') {
@@ -383,6 +388,45 @@ describe('keyboard camera input', () => {
       const { actions, input } = setup();
       input.handleKeyDown(keyEvent(' ', { ctrlKey: true }));
       expect(actions.togglePause).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('modal editor guard (FR-029, US2-9, US4-6)', () => {
+    it('no office shortcut acts while the editor is open, 001 ones included', () => {
+      const { actions, input } = setup({ editorOpen: true });
+      for (const [key, options] of [
+        ['ArrowRight', {}],
+        ['+', {}],
+        ['0', {}],
+        ['g', {}],
+        ['3', {}],
+        ['Tab', {}],
+        ['Tab', { shiftKey: true }],
+        ['Escape', {}],
+        [' ', {}],
+      ] as const) {
+        const event = keyEvent(key, options);
+        input.handleKeyDown(event);
+        expect(event.defaultPrevented, key).toBe(false);
+      }
+      input.tick(100);
+      for (const action of Object.values(actions)) {
+        if (action !== actions.isEditorOpen && action !== actions.getViewport) {
+          expect(action).not.toHaveBeenCalled();
+        }
+      }
+    });
+
+    it('a held pan key stops panning when the editor opens', () => {
+      const { actions, input, setEditorOpen } = setup();
+      input.handleKeyDown(keyEvent('ArrowRight'));
+      input.tick(100);
+      expect(actions.panBy).toHaveBeenCalledTimes(1);
+      setEditorOpen(true);
+      input.tick(100);
+      setEditorOpen(false);
+      input.tick(100);
+      expect(actions.panBy).toHaveBeenCalledTimes(1);
     });
   });
 });

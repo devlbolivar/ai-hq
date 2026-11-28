@@ -16,8 +16,9 @@ import {
 
 const camera = initialCamera({ width: 1280, height: 800 }, marketingLayout);
 
-function makeActions() {
+function makeActions({ editorOpen = false } = {}) {
   return {
+    isEditorOpen: vi.fn(() => editorOpen),
     panBy: vi.fn(),
     zoomAt: vi.fn(),
     pointerMove: vi.fn(),
@@ -350,5 +351,25 @@ describe('attachMouse', () => {
     host.dispatchEvent(new MouseEvent('pointerleave'));
     expect(actions.pointerMove).toHaveBeenCalledTimes(1);
     expect(actions.pointerLeave).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('mouse input — modal editor guard (FR-029, US4-6)', () => {
+  it('no gesture acts while the editor is open', () => {
+    const actions = makeActions({ editorOpen: true });
+    const mouse = createMouseInput(actions);
+    mouse.handlePointerMove(pointer(200, 200));
+    mouse.handlePointerDown(pointer(200, 200));
+    mouse.handlePointerMove(pointer(260, 230));
+    mouse.handlePointerUp(pointer(260, 230));
+    mouse.handlePointerDown(pointer(300, 300));
+    mouse.handlePointerUp(pointer(300, 300));
+    const event = wheel(300, 300, -100);
+    mouse.handleWheel(event);
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(actions.pointerMove).not.toHaveBeenCalled();
+    expect(actions.panBy).not.toHaveBeenCalled();
+    expect(actions.clickAt).not.toHaveBeenCalled();
+    expect(actions.zoomAt).not.toHaveBeenCalled();
   });
 });
