@@ -104,8 +104,8 @@ describe('AgentEditor (FR-030–FR-032, US4)', () => {
     const { store, dialog } = open();
     act(() => {
       store.getState().saveAgent('copywriter', { ...copywriter, name: 'Pluma', color: 'slate' });
-      store.getState().openEditor('copywriter');
     });
+    act(() => store.getState().openEditor('copywriter'));
     const d = within(screen.getByRole('dialog'));
     expect(d.getByRole('textbox', { name: 'Nombre' })).toHaveProperty('value', 'Pluma');
     await userEvent.click(d.getByRole('button', { name: 'Restaurar valores originales' }));
