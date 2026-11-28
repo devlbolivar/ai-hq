@@ -4,6 +4,8 @@ import {
   advanceFrame,
   agentPosition,
   applyDraft,
+  applyOrder,
+  cancelForcedOrders,
   centerOn,
   createSimulation,
   createSimWorld,
@@ -26,6 +28,8 @@ import {
   type AgentDraftErrors,
   type AgentProfile,
   type Camera,
+  type Order,
+  type OrderResult,
   type Coord,
   type HoverTarget,
   type OfficeLayout,
@@ -67,6 +71,16 @@ export interface FollowTransition {
   readonly elapsedMs: number;
 }
 
+/** How long the "Sin sitio libre" notice stays visible (frame time). */
+export const NOTICE_MS = 2000;
+
+export interface Notice {
+  readonly message: string;
+  /** Changes on every notice so the same message can be shown again. */
+  readonly id: number;
+  readonly remainingMs: number;
+}
+
 export interface OfficeState {
   readonly layout: OfficeLayout;
   readonly viewport: Viewport;
@@ -89,6 +103,15 @@ export interface OfficeState {
   readonly seed: number;
   readonly selection: Selection;
   readonly follow: FollowTransition | null;
+  /** Orders received while paused; applied in arrival order on resume (FR-020). */
+  readonly queuedOrders: readonly { readonly agentId: string; readonly order: Order }[];
+  /** Ephemeral notice ("Sin sitio libre", FR-034). */
+  readonly notice: Notice | null;
+  /**
+   * Sends an external order (debug buttons, test hook; FR-034). Returns its result, or null when
+   * it was queued because the simulation is paused.
+   */
+  sendOrder(agentId: string, order: Order): OrderResult | null;
   /** Open editor dialog; while open no office shortcut or gesture acts (FR-029). */
   readonly editor: { readonly agentId: string } | null;
   /**
@@ -169,6 +192,15 @@ function followCamera(state: OfficeState, transition: FollowTransition | null): 
   };
 }
 
+let noticeCount = 0;
+
+/** "Sin sitio libre" when an order finds no free use point (FR-034). */
+function noticeFor(result: OrderResult): Notice | null {
+  if (result.ok || result.reason !== 'NO_FREE_SPOT') return null;
+  noticeCount += 1;
+  return { message: 'Sin sitio libre', id: noticeCount, remainingMs: NOTICE_MS };
+}
+
 /** Any manual camera move stops following but keeps the selection (FR-028). */
 function stopFollowing(selection: Selection) {
   return { selection: { agentId: selection.agentId, following: false }, follow: null };
@@ -227,7 +259,11 @@ export function createOfficeStore({
         const advanced = state.paused
           ? {}
           : advanceFrame(state.sim, state.world, state.accumulatorMs, dtMs);
-        if (!state.selection.following) return advanced;
+        const notice =
+          state.notice && state.notice.remainingMs > dtMs
+            ? { ...state.notice, remainingMs: state.notice.remainingMs - dtMs }
+            : null;
+        if (!state.selection.following) return { ...advanced, notice };
         const view = { ...state, ...advanced };
         const elapsed = (state.follow?.elapsedMs ?? FOLLOW_MS) + dtMs;
         const transition =
@@ -236,6 +272,7 @@ export function createOfficeStore({
           ...advanced,
           ...withCamera(view, followCamera(view, transition)),
           follow: transition,
+          notice,
         };
       }),
     select: (agentId) =>
@@ -249,7 +286,30 @@ export function createOfficeStore({
           : state,
       ),
     deselect: () => set({ selection: NO_SELECTION, follow: null }),
-    togglePause: () => set((state) => ({ paused: !state.paused })),
+    togglePause: () =>
+      set((state) => {
+        if (!state.paused) return { paused: true };
+        let { sim } = state;
+        let notice = state.notice;
+        for (const { agentId, order } of state.queuedOrders) {
+          const out = applyOrder(sim, state.world, agentId, order);
+          sim = out.sim;
+          notice = noticeFor(out.result) ?? notice;
+        }
+        return { paused: false, sim, queuedOrders: [], notice };
+      }),
+    queuedOrders: [],
+    notice: null,
+    sendOrder: (agentId, order) => {
+      const state = get();
+      if (state.paused) {
+        set({ queuedOrders: [...state.queuedOrders, { agentId, order }] });
+        return null;
+      }
+      const { sim, result } = applyOrder(state.sim, state.world, agentId, order);
+      set({ sim, notice: noticeFor(result) ?? state.notice });
+      return result;
+    },
     editor: null,
     openEditor: (agentId) => {
       if (!get().team.some((a) => a.id === agentId)) return;
@@ -318,9 +378,12 @@ export function createOfficeStore({
       })),
     pointerLeave: () => set({ pointer: null, hover: null }),
     toggleDebug: () =>
-      set((state) => ({
-        debug: state.debug.enabled ? IDLE_DEBUG : { ...IDLE_DEBUG, enabled: true },
-      })),
+      set((state) =>
+        state.debug.enabled
+          ? // Turning debug off cancels forced orders, queued ones included (FR-034).
+            { debug: IDLE_DEBUG, sim: cancelForcedOrders(state.sim, state.world), queuedOrders: [] }
+          : { debug: { ...IDLE_DEBUG, enabled: true } },
+      ),
     selectTile: (tile) =>
       set((state) => (state.debug.enabled ? { debug: nextDebug(state.debug, tile) } : state)),
   }));
