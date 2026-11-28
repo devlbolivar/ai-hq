@@ -54,3 +54,47 @@ describe('TeamPanel — edit buttons (FR-033)', () => {
     expect(store.getState().selection.agentId).toBe('designer');
   });
 });
+
+describe('TeamPanel — selectable cards (FR-026, FR-027, US2-1)', () => {
+  it('each card is a button "N. Nombre — Rol" with aria-pressed', () => {
+    render(<TeamPanel store={createOfficeStore({ viewport, paused: true })} />);
+    marketingTeam.forEach((agent, i) => {
+      const card = screen.getByRole('button', { name: `${i + 1}. ${agent.name} — ${agent.role}` });
+      expect(card.getAttribute('aria-pressed')).toBe('false');
+    });
+  });
+
+  it('clicking a card selects that agent and only its card is pressed', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const store = createOfficeStore({ viewport, paused: true });
+    render(<TeamPanel store={store} />);
+    await userEvent.click(screen.getByRole('button', { name: '3. Copywriter — Redactor' }));
+    expect(store.getState().selection).toEqual({ agentId: 'copywriter', following: true });
+    const pressed = screen
+      .getAllByRole('button', { pressed: true })
+      .map((b) => b.getAttribute('aria-label') ?? b.textContent);
+    expect(pressed).toEqual(['3. Copywriter — Redactor']);
+    expect(store.getState().editor).toBeNull();
+  });
+
+  it('follows selection changes from elsewhere (keyboard, canvas)', () => {
+    const store = createOfficeStore({ viewport, paused: true });
+    render(<TeamPanel store={store} />);
+    act(() => store.getState().selectNumber(5));
+    expect(
+      screen.getByRole('button', { name: '5. Designer — Diseño' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    act(() => store.getState().deselect());
+    expect(screen.queryAllByRole('button', { pressed: true })).toHaveLength(0);
+  });
+
+  it('shows the edited name in the card button', () => {
+    const store = createOfficeStore({ viewport, paused: true });
+    render(<TeamPanel store={store} />);
+    act(() => {
+      const scout = store.getState().team[1]!;
+      store.getState().saveAgent(scout.id, { ...scout, name: 'Radar' });
+    });
+    expect(screen.getByRole('button', { name: '2. Radar — Investigador' })).toBeTruthy();
+  });
+});
