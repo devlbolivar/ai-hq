@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { agentColorHex } from '@ai-hq/domain';
@@ -9,6 +10,7 @@ import { officeStore, type OfficeStore } from '../state/store';
 export function TeamPanel({ store = officeStore }: { store?: OfficeStore }) {
   const team = useStore(store, (state) => state.team);
   const selectedId = useStore(store, (state) => state.selection.agentId);
+  const baseId = useId();
   // Only status changes re-render the panel, not every simulation step.
   const statuses = useStore(
     store,
@@ -33,6 +35,7 @@ export function TeamPanel({ store = officeStore }: { store?: OfficeStore }) {
                 type="button"
                 aria-pressed={selected}
                 aria-label={`${i + 1}. ${agent.name} — ${agent.role}`}
+                aria-describedby={`${baseId}-status-${i}`}
                 onClick={() => store.getState().select(agent.id)}
                 className={`flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:outline-none ${
                   selected ? 'bg-slate-700/80' : ''
@@ -49,8 +52,9 @@ export function TeamPanel({ store = officeStore }: { store?: OfficeStore }) {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{agent.name}</span>
-                  <span className="block truncate text-xs text-slate-400">
-                    {agent.role} · {STATUS_LABELS[statuses[i] ?? 'idle']}
+                  <span className="block truncate text-xs text-slate-400">{agent.role}</span>
+                  <span id={`${baseId}-status-${i}`} className="block text-xs text-slate-300">
+                    {STATUS_LABELS[statuses[i] ?? 'idle']}
                   </span>
                 </span>
                 <span
