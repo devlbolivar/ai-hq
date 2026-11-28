@@ -363,7 +363,8 @@ export function createOfficeStore({
         selection.agentId,
         n,
       );
-      if (id !== null && id !== selection.agentId) select(id);
+      // The same number again resumes a follow stopped by pan or zoom (US2-7).
+      if (id !== null && (id !== selection.agentId || !selection.following)) select(id);
     },
     cycle: (direction) => {
       const { team, selection, select } = get();
