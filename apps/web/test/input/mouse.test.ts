@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   initialCamera,
   marketingLayout,
-  screenToGrid,
   tileCenter,
   worldToScreen,
   ZOOM_STEP,
@@ -17,16 +16,13 @@ import {
 
 const camera = initialCamera({ width: 1280, height: 800 }, marketingLayout);
 
-function makeActions({ debug = false } = {}) {
+function makeActions() {
   return {
     panBy: vi.fn(),
     zoomAt: vi.fn(),
     pointerMove: vi.fn(),
     pointerLeave: vi.fn(),
-    isDebugEnabled: vi.fn(() => debug),
-    getCamera: vi.fn(() => camera),
-    getLayout: vi.fn(() => marketingLayout),
-    selectTile: vi.fn(),
+    clickAt: vi.fn(),
   } satisfies MouseActions;
 }
 
@@ -219,89 +215,61 @@ describe('mouse input — hover (FR-017–FR-019)', () => {
   });
 });
 
-describe('mouse input — debug tile picking (US4, FR-023)', () => {
+describe('mouse input — click (FR-026, US2-1, US2-8, US2-10)', () => {
   function click(mouse: ReturnType<typeof createMouseInput>, x: number, y: number, extra = {}) {
     mouse.handlePointerDown(pointer(x, y, extra));
     mouse.handlePointerUp(pointer(x, y, extra));
   }
 
-  it('in debug mode a click without drag selects the tile under the pointer via screenToGrid', () => {
-    const actions = makeActions({ debug: true });
+  it('a click without drag calls clickAt once with the release point', () => {
+    const actions = makeActions();
     const mouse = createMouseInput(actions);
     const at = screenOf({ x: 8, y: 11 });
     click(mouse, at.x, at.y);
-    expect(actions.selectTile).toHaveBeenCalledTimes(1);
-    expect(actions.selectTile).toHaveBeenCalledWith({ x: 8, y: 11 });
-    expect(actions.selectTile).toHaveBeenCalledWith(screenToGrid(camera, at, marketingLayout));
+    expect(actions.clickAt).toHaveBeenCalledTimes(1);
+    expect(actions.clickAt).toHaveBeenCalledWith(at);
   });
 
   it('uses coordinates relative to the canvas host', () => {
     const host = document.createElement('div');
     host.getBoundingClientRect = () => ({ left: 50, top: 30 }) as DOMRect;
     document.body.appendChild(host);
-    const actions = makeActions({ debug: true });
+    const actions = makeActions();
     const mouse = createMouseInput(actions, host);
-    const at = screenOf({ x: 3, y: 9 });
-    click(mouse, at.x + 50, at.y + 30, { target: host });
-    expect(actions.selectTile).toHaveBeenCalledWith({ x: 3, y: 9 });
+    click(mouse, 250, 130, { target: host });
+    expect(actions.clickAt).toHaveBeenCalledWith({ x: 200, y: 100 });
   });
 
   it('a press that moves 4 px or less still counts as a click', () => {
-    const actions = makeActions({ debug: true });
+    const actions = makeActions();
     const mouse = createMouseInput(actions);
-    const at = screenOf({ x: 9, y: 6 });
-    mouse.handlePointerDown(pointer(at.x, at.y));
-    mouse.handlePointerMove(pointer(at.x + 3, at.y + 2));
-    mouse.handlePointerUp(pointer(at.x + 3, at.y + 2));
-    expect(actions.selectTile).toHaveBeenCalledWith({ x: 9, y: 6 });
+    mouse.handlePointerDown(pointer(300, 300));
+    mouse.handlePointerMove(pointer(303, 302));
+    mouse.handlePointerUp(pointer(303, 302));
+    expect(actions.clickAt).toHaveBeenCalledWith({ x: 303, y: 302 });
     expect(actions.panBy).not.toHaveBeenCalled();
   });
 
-  it('a drag pans and selects nothing', () => {
-    const actions = makeActions({ debug: true });
-    const mouse = createMouseInput(actions);
-    const at = screenOf({ x: 9, y: 6 });
-    mouse.handlePointerDown(pointer(at.x, at.y));
-    mouse.handlePointerMove(pointer(at.x + 30, at.y));
-    mouse.handlePointerMove(pointer(at.x, at.y));
-    mouse.handlePointerUp(pointer(at.x, at.y));
-    expect(actions.panBy).toHaveBeenCalledTimes(2);
-    expect(actions.selectTile).not.toHaveBeenCalled();
-  });
-
-  it('clicks outside the grid are ignored', () => {
-    const actions = makeActions({ debug: true });
-    const mouse = createMouseInput(actions);
-    expect(screenToGrid(camera, { x: 5, y: 5 }, marketingLayout)).toBeNull();
-    click(mouse, 5, 5);
-    expect(actions.selectTile).not.toHaveBeenCalled();
-  });
-
-  it('clicks select nothing while debug mode is off', () => {
+  it('a drag (also one that starts on a character) only pans', () => {
     const actions = makeActions();
     const mouse = createMouseInput(actions);
-    const at = screenOf({ x: 8, y: 11 });
-    click(mouse, at.x, at.y);
-    expect(actions.selectTile).not.toHaveBeenCalled();
+    mouse.handlePointerDown(pointer(300, 300));
+    mouse.handlePointerMove(pointer(330, 300));
+    mouse.handlePointerMove(pointer(300, 300));
+    mouse.handlePointerUp(pointer(300, 300));
+    expect(actions.panBy).toHaveBeenCalledTimes(2);
+    expect(actions.clickAt).not.toHaveBeenCalled();
   });
 
   it('ignores clicks on a [data-ui-control], with other buttons, or without a press', () => {
     document.body.innerHTML = '<button data-ui-control>Modo depuración</button>';
     const button = document.querySelector('button');
-    const actions = makeActions({ debug: true });
+    const actions = makeActions();
     const mouse = createMouseInput(actions);
-    const at = screenOf({ x: 8, y: 11 });
-    click(mouse, at.x, at.y, { target: button });
-    click(mouse, at.x, at.y, { button: 2 });
-    mouse.handlePointerUp(pointer(at.x, at.y));
-    expect(actions.selectTile).not.toHaveBeenCalled();
-  });
-
-  it('keeps hovering while debug mode is on', () => {
-    const actions = makeActions({ debug: true });
-    const mouse = createMouseInput(actions);
-    mouse.handlePointerMove(pointer(200, 200));
-    expect(actions.pointerMove).toHaveBeenCalledWith({ x: 200, y: 200 });
+    click(mouse, 300, 300, { target: button });
+    click(mouse, 300, 300, { button: 2 });
+    mouse.handlePointerUp(pointer(300, 300));
+    expect(actions.clickAt).not.toHaveBeenCalled();
   });
 });
 
@@ -334,9 +302,9 @@ describe('attachMouse', () => {
     expect(actions.zoomAt).toHaveBeenCalledTimes(1);
   });
 
-  it.each([false, true])('discards a cancelled debug gesture (dragging: %s)', (dragging) => {
+  it.each([false, true])('discards a cancelled gesture (dragging: %s)', (dragging) => {
     const host = canvas();
-    const actions = makeActions({ debug: true });
+    const actions = makeActions();
     const detach = attachMouse(host, createMouseInput(actions, host));
     const at = screenOf({ x: 8, y: 11 });
     const point = { clientX: at.x, clientY: at.y };
@@ -346,23 +314,23 @@ describe('attachMouse', () => {
       fire(host, 'pointercancel', point);
       fire(host, 'pointermove', { ...point, clientX: at.x + 20 });
       fire(host, 'pointerup', point);
-      expect(actions.selectTile).not.toHaveBeenCalled();
+      expect(actions.clickAt).not.toHaveBeenCalled();
       expect(actions.panBy).toHaveBeenCalledTimes(dragging ? 1 : 0);
     } finally {
       detach();
     }
   });
 
-  it('a click (host pointerdown, window pointerup) picks a tile in debug mode', () => {
+  it('a click is a host pointerdown plus a window pointerup', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const actions = makeActions({ debug: true });
+    const actions = makeActions();
     const detach = attachMouse(host, createMouseInput(actions, host));
     const at = screenOf({ x: 8, y: 11 });
 
     fire(host, 'pointerdown', { button: 0, clientX: at.x, clientY: at.y });
     fire(window, 'pointerup', { button: 0, clientX: at.x, clientY: at.y });
-    expect(actions.selectTile).toHaveBeenCalledWith({ x: 8, y: 11 });
+    expect(actions.clickAt).toHaveBeenCalledWith(at);
     detach();
   });
 
