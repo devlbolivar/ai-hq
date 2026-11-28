@@ -54,8 +54,9 @@ function validGoTo(sim: Simulation, world: SimWorld, agentId: string, tile: Coor
 
 /**
  * Stops an agent (order `idle`, FR-034 as amended): a walker finishes its step and halts on the first
- * route tile that is not someone else's use point, keeping its reservation only when it stops on
- * it; an activity becomes `idle` in place. Autonomy resumes with a fresh idle pause.
+ * route tile that is not someone else's use point, another agent's destination or a still agent
+ * (agents never end on the same tile; spec edge cases), keeping its reservation only when it stops
+ * on it; an activity becomes `idle` in place. Autonomy resumes with a fresh idle pause.
  */
 function stop(sim: Simulation, world: SimWorld, index: number): Simulation {
   const agent = sim.agents[index]!;
@@ -63,9 +64,16 @@ function stop(sim: Simulation, world: SimWorld, index: number): Simulation {
     const own = agent.reservation
       ? key(resolveUsePoint(world.layout, agent.reservation).tile)
       : null;
-    const points = usePointTiles(world);
+    const taken = new Set(usePointTiles(world));
+    for (const other of sim.agents) {
+      if (other.id === agent.id) continue;
+      if (other.target) taken.add(key(other.target.tile));
+      if (other.next === null) taken.add(key(other.tile));
+    }
     const tiles = [agent.next, ...agent.route];
-    const at = tiles.findIndex((t) => !points.has(key(t)) || key(t) === own);
+    const free = tiles.findIndex((t) => !taken.has(key(t)) || key(t) === own);
+    // Its own destination is never taken by another agent, so this fallback is defensive.
+    const at = free === -1 ? tiles.length - 1 : free;
     const stopTile = tiles[at]!;
     return replaceAgent(sim, index, {
       ...agent,
