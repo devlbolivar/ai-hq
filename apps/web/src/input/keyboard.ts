@@ -1,6 +1,6 @@
 import { ZOOM_STEP, type Point, type Viewport } from '@ai-hq/domain';
 
-/** Camera and debug actions provided by the store. */
+/** Camera, debug and selection actions provided by the store. */
 export interface KeyboardCameraActions {
   panBy(delta: Point): void;
   zoomAt(anchor: Point, factor: number): void;
@@ -8,6 +8,12 @@ export interface KeyboardCameraActions {
   /** Turns debug mode on or off (FR-023). */
   toggleDebug(): void;
   getViewport(): Viewport;
+  /** `1`–`9`: the n-th agent (FR-029). */
+  selectNumber(n: number): void;
+  /** `Tab` (1) / `Shift+Tab` (−1). */
+  cycle(direction: 1 | -1): void;
+  /** `Esc`. */
+  deselect(): void;
 }
 
 export interface KeyboardInput {
@@ -30,12 +36,37 @@ function isEditable(target: EventTarget | null): boolean {
   );
 }
 
+/**
+ * The 002 keys also leave buttons and links alone, so `Tab` keeps moving focus and `Esc`/digits do
+ * not hijack a focused control (FR-029); the 001 shortcuts keep their own rule.
+ */
+function isFocusedControl(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest('input, textarea, select, button, a[href], [contenteditable]') !== null
+  );
+}
+
+/** Agent selection (`1`–`9`, `Tab`, `Shift+Tab`, `Esc`); true when the key acted. */
+function handleSelectionKey(event: KeyboardEvent, actions: KeyboardCameraActions): boolean {
+  if (isFocusedControl(event.target)) return false;
+  if (/^[1-9]$/.test(event.key)) actions.selectNumber(Number(event.key));
+  else if (event.key === 'Tab') actions.cycle(event.shiftKey ? -1 : 1);
+  else if (event.key === 'Escape') actions.deselect();
+  else return false;
+  return true;
+}
+
 export function createKeyboardInput(actions: KeyboardCameraActions): KeyboardInput {
   const held = new Set<string>();
 
   return {
     handleKeyDown(event) {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (handleSelectionKey(event, actions)) {
+        event.preventDefault();
+        return;
+      }
       if (isEditable(event.target)) return;
 
       const key = event.key.toLowerCase();

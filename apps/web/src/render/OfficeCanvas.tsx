@@ -155,7 +155,12 @@ function attachInput(app: Application, host: HTMLElement, store: OfficeStore): (
     host,
     createMouseInput({ ...camera, ...pointer, ...debug }, host),
   );
-  const keyboard = createKeyboardInput({ ...camera, ...debug });
+  const selection = {
+    selectNumber: (n: number) => store.getState().selectNumber(n),
+    cycle: (direction: 1 | -1) => store.getState().cycle(direction),
+    deselect: () => store.getState().deselect(),
+  };
+  const keyboard = createKeyboardInput({ ...camera, ...debug, ...selection });
   const detachKeyboard = attachKeyboard(window, keyboard);
   const tick = (ticker: Ticker) => keyboard.tick(ticker.deltaMS);
   app.ticker.add(tick);
