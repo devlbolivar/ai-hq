@@ -355,6 +355,21 @@ describe('attachMouse', () => {
 });
 
 describe('mouse input — modal editor guard (FR-029, US4-6)', () => {
+  it('a press made before the editor opened is dropped (no pan, no click)', () => {
+    let open = false;
+    const actions = { ...makeActions(), isEditorOpen: vi.fn(() => open) };
+    const mouse = createMouseInput(actions);
+    mouse.handlePointerDown(pointer(200, 200));
+    open = true;
+    mouse.handlePointerMove(pointer(260, 230));
+    mouse.handlePointerUp(pointer(260, 230));
+    mouse.handlePointerDown(pointer(300, 300));
+    open = false;
+    mouse.handlePointerUp(pointer(300, 300));
+    expect(actions.panBy).not.toHaveBeenCalled();
+    expect(actions.clickAt).not.toHaveBeenCalled();
+  });
+
   it('no gesture acts while the editor is open', () => {
     const actions = makeActions({ editorOpen: true });
     const mouse = createMouseInput(actions);
