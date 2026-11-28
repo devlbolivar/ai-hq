@@ -1,12 +1,24 @@
 import { useStore } from 'zustand';
-import { agentColorHex } from '@ai-hq/domain';
+import { agentColorHex, type Order } from '@ai-hq/domain';
 import { STATUS_LABELS, toCss } from '../render/palette';
 import { officeStore, type OfficeStore } from '../state/store';
 
-/** Right panel for the selected agent (spec Assumptions): name, role and status. */
+const DEBUG_ORDERS: readonly { label: string; order: Order }[] = [
+  { label: 'Trabajar', order: { type: 'activity', activity: 'work' } },
+  { label: 'Reunión', order: { type: 'activity', activity: 'meeting' } },
+  { label: 'Descanso', order: { type: 'activity', activity: 'break' } },
+  { label: 'Entregar a revisión', order: { type: 'activity', activity: 'review' } },
+  { label: 'Volver a idle', order: { type: 'idle' } },
+];
+
+/**
+ * Right panel for the selected agent (spec Assumptions): name, role, status, "Editar" and, in
+ * debug mode, the orders of FR-034.
+ */
 export function AgentPanel({ store = officeStore }: { store?: OfficeStore }) {
   const agentId = useStore(store, (state) => state.selection.agentId);
   const profile = useStore(store, (state) => state.team.find((a) => a.id === agentId) ?? null);
+  const debug = useStore(store, (state) => state.debug.enabled);
   const status = useStore(
     store,
     (state) => state.sim.agents.find((a) => a.id === agentId)?.status ?? 'idle',
@@ -35,6 +47,24 @@ export function AgentPanel({ store = officeStore }: { store?: OfficeStore }) {
       >
         Editar
       </button>
+      {debug ? (
+        <div
+          role="group"
+          aria-label="Órdenes de depuración"
+          className="mt-3 flex flex-wrap gap-1.5"
+        >
+          {DEBUG_ORDERS.map(({ label, order }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => store.getState().sendOrder(profile.id, order)}
+              className="rounded border border-amber-500/50 px-2 py-0.5 text-xs text-amber-100 hover:bg-amber-900/50 focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:outline-none"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }

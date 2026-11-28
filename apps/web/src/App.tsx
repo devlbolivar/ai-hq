@@ -3,6 +3,7 @@ import { AgentEditor } from './ui/AgentEditor';
 import { AgentPanel } from './ui/AgentPanel';
 import { DebugToggle } from './ui/DebugToggle';
 import { HoverLabel } from './ui/HoverLabel';
+import { Notice } from './ui/Notice';
 import { PathStatus } from './ui/PathStatus';
 import { PauseIndicator } from './ui/PauseIndicator';
 import { RecenterButton } from './ui/RecenterButton';
@@ -19,6 +20,7 @@ export function App() {
       <HoverLabel />
       <PathStatus />
       <PauseIndicator />
+      <Notice />
       <DebugToggle />
       <RecenterButton />
     </main>
