@@ -412,8 +412,20 @@ export function createOfficeStore({
     toggleDebug: () =>
       set((state) =>
         state.debug.enabled
-          ? // Turning debug off cancels forced orders, queued ones included (FR-034).
-            { debug: IDLE_DEBUG, sim: cancelForcedOrders(state.sim, state.world), queuedOrders: [] }
+          ? // Turning debug off cancels forced orders and drops queued ones (FR-034); while paused
+            // the cancellation waits for the resume like any other order (FR-020).
+            state.paused
+            ? {
+                debug: IDLE_DEBUG,
+                queuedOrders: state.sim.agents
+                  .filter((a) => a.forced)
+                  .map((a) => ({ agentId: a.id, order: { type: 'idle' } as const })),
+              }
+            : {
+                debug: IDLE_DEBUG,
+                sim: cancelForcedOrders(state.sim, state.world),
+                queuedOrders: [],
+              }
           : { debug: { ...IDLE_DEBUG, enabled: true } },
       ),
     selectTile: (tile) =>
