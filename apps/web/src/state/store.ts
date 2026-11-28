@@ -11,13 +11,13 @@ import {
   createSimWorld,
   cycleSelection,
   findPath,
-  hitTest,
   initialCamera,
   marketingLayout,
   marketingTeam,
   pan,
   positionToWorld,
   recenter,
+  sceneHitTest,
   screenToWorld,
   selectByNumber,
   validateAgentDraft,
@@ -32,9 +32,9 @@ import {
   type Order,
   type OrderResult,
   type Coord,
-  type HoverTarget,
   type OfficeLayout,
   type PathResult,
+  type SceneHoverTarget,
   type Point,
   type SimWorld,
   type Simulation,
@@ -88,8 +88,11 @@ export interface OfficeState {
   readonly camera: Camera;
   /** True once the user has panned or zoomed; until then resizes keep the office centered. */
   readonly cameraTouched: boolean;
-  /** What is under the pointer: front-most object, floor tile, or nothing (FR-017–FR-019). */
-  readonly hover: HoverTarget;
+  /**
+   * What is under the pointer: front-most character or object, floor tile, or nothing
+   * (FR-017–FR-019, FR-023).
+   */
+  readonly hover: SceneHoverTarget;
   /** Last pointer position relative to the canvas host; null while the pointer is outside. */
   readonly pointer: Point | null;
   readonly debug: DebugState;
@@ -158,26 +161,32 @@ export interface OfficeState {
   selectTile(tile: Coord): void;
 }
 
-function sameHover(a: HoverTarget, b: HoverTarget): boolean {
+function sameHover(a: SceneHoverTarget, b: SceneHoverTarget): boolean {
   if (a === null || b === null) return a === b;
-  if (a.type === 'object') return b.type === 'object' && a.id === b.id;
-  return b.type === 'tile' && a.tile.x === b.tile.x && a.tile.y === b.tile.y;
+  if (a.type === 'tile') return b.type === 'tile' && a.tile.x === b.tile.x && a.tile.y === b.tile.y;
+  return b.type === a.type && a.id === b.id;
 }
 
-/** Hover under `pointer` with `camera`, reusing `previous` when the target did not change. */
+/**
+ * Hover under `pointer` with `camera` and the current agent positions, reusing `previous` when
+ * the target did not change (so a still target does not re-render React every frame).
+ */
 function hoverAt(
   pointer: Point | null,
   camera: Camera,
   layout: OfficeLayout,
-  previous: HoverTarget,
-): HoverTarget {
-  const next = pointer ? hitTest(screenToWorld(camera, pointer), layout) : null;
+  sim: Simulation,
+  previous: SceneHoverTarget,
+): SceneHoverTarget {
+  const next = pointer
+    ? sceneHitTest(screenToWorld(camera, pointer), layout, characterPlacements(sim))
+    : null;
   return sameHover(previous, next) ? previous : next;
 }
 
 /** A camera change plus the hover it causes under a still pointer. */
 function withCamera(state: OfficeState, camera: Camera) {
-  return { camera, hover: hoverAt(state.pointer, camera, state.layout, state.hover) };
+  return { camera, hover: hoverAt(state.pointer, camera, state.layout, state.sim, state.hover) };
 }
 
 /** Camera that keeps the followed agent centered, easing in while a transition runs. */
@@ -275,8 +284,12 @@ export function createOfficeStore({
           state.notice && state.notice.remainingMs > dtMs
             ? { ...state.notice, remainingMs: state.notice.remainingMs - dtMs }
             : null;
-        if (!state.selection.following) return { ...advanced, notice };
         const view = { ...state, ...advanced };
+        if (!state.selection.following) {
+          // Agents move under a still pointer: the hover follows them (FR-023).
+          const hover = hoverAt(state.pointer, state.camera, state.layout, view.sim, state.hover);
+          return { ...advanced, hover, notice };
+        }
         const elapsed = (state.follow?.elapsedMs ?? FOLLOW_MS) + dtMs;
         const transition =
           state.follow && elapsed < FOLLOW_MS ? { ...state.follow, elapsedMs: elapsed } : null;
@@ -386,7 +399,7 @@ export function createOfficeStore({
     pointerMove: (screenPoint) =>
       set((state) => ({
         pointer: screenPoint,
-        hover: hoverAt(screenPoint, state.camera, state.layout, state.hover),
+        hover: hoverAt(screenPoint, state.camera, state.layout, state.sim, state.hover),
       })),
     pointerLeave: () => set({ pointer: null, hover: null }),
     toggleDebug: () =>

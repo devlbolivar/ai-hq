@@ -65,7 +65,10 @@ interface SceneHook {
 }
 
 /** Plain JSON copy of a hook field (getters and frozen objects do not cross `evaluate` as-is). */
-export function readHookField<K extends keyof SceneHook>(page: Page, key: K): Promise<SceneHook[K]> {
+export function readHookField<K extends keyof SceneHook>(
+  page: Page,
+  key: K,
+): Promise<SceneHook[K]> {
   return page.evaluate((k) => {
     const value = (window as unknown as { __AIHQ__: Record<string, unknown> }).__AIHQ__[k];
     return value === undefined ? undefined : JSON.parse(JSON.stringify(value));

@@ -2,7 +2,8 @@ import { useStore } from 'zustand';
 import { officeStore, type OfficeStore } from '../state/store';
 
 export function HoverLabel({ store = officeStore }: { store?: OfficeStore }): JSX.Element | null {
-  const name = useStore(store, ({ hover, layout }) => {
+  const name = useStore(store, ({ hover, layout, team }) => {
+    if (hover?.type === 'agent') return team.find((agent) => agent.id === hover.id)?.name ?? null;
     if (hover?.type !== 'object') return null;
     return layout.objects.find((object) => object.id === hover.id)?.name ?? null;
   });

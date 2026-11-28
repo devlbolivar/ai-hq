@@ -217,7 +217,12 @@ export function OfficeCanvas({ store = officeStore }: { store?: OfficeStore }) {
         unsubscribe = store.subscribe((state, prev) => {
           if (state.camera !== prev.camera) applyCamera(root, state.camera);
           if (state.debug !== prev.debug) drawDebugOverlay(debugLayer, state.debug, state.layout);
-          if (state.hover !== prev.hover) drawOverlay(highlight, state.hover, state.layout);
+          // A hovered character's highlight moves with it.
+          if (
+            state.hover !== prev.hover ||
+            (state.hover?.type === 'agent' && state.sim !== prev.sim)
+          )
+            drawOverlay(highlight, state.hover, state.layout, characterPlacements(state.sim));
           if (state.sim !== prev.sim) sortScene(scene, state);
           if (
             state.sim !== prev.sim ||
