@@ -48,14 +48,26 @@ describe('orders from the store (FR-020, FR-034)', () => {
     expect(store.getState().notice?.message).toBe('Sin sitio libre');
   });
 
-  it('cancels forced orders and empties the queue when debug mode is turned off', () => {
+  it('cancels forced orders when debug mode is turned off', () => {
+    const store = debugStore();
+    store.getState().sendOrder('copywriter', meeting);
+    const { sim, world } = store.getState();
+    store.getState().toggleDebug();
+    expect(store.getState().sim).toEqual(cancelForcedOrders(sim, world));
+  });
+
+  it('while paused, turning debug off drops queued orders and cancels on resume (FR-020)', () => {
     const store = debugStore();
     store.getState().sendOrder('copywriter', meeting);
     const { sim, world } = store.getState();
     store.getState().togglePause();
     store.getState().sendOrder('designer', meeting);
     store.getState().toggleDebug();
-    expect(store.getState().queuedOrders).toEqual([]);
+    // Frozen: nothing changes until the simulation resumes.
+    expect(store.getState().sim).toBe(sim);
+    expect(store.getState().queuedOrders.map((q) => q.agentId)).toEqual(['copywriter']);
+    store.getState().togglePause();
     expect(store.getState().sim).toEqual(cancelForcedOrders(sim, world));
+    expect(store.getState().queuedOrders).toEqual([]);
   });
 });
