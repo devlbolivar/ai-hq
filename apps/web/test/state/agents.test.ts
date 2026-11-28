@@ -46,3 +46,17 @@ describe('store with the agent simulation (data-model.md "Estado de la web")', (
     expect(() => createOfficeStore({ viewport, team })).toThrow(/trend-scout.*deskId/s);
   });
 });
+
+describe('pause (FR-020, US3-8)', () => {
+  it('togglePause freezes the simulation and resumes from the same state', () => {
+    const store = createOfficeStore({ viewport, seed: 7 });
+    store.getState().tick(100);
+    store.getState().togglePause();
+    const frozen = store.getState().sim;
+    store.getState().tick(1000);
+    expect(store.getState().sim).toBe(frozen);
+    store.getState().togglePause();
+    store.getState().tick(16);
+    expect(store.getState().sim.timeMs).toBe(frozen.timeMs + 10);
+  });
+});
