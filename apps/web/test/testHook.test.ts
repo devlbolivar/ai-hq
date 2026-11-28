@@ -154,6 +154,26 @@ describe('installTestHook', () => {
     ).toBe(true);
   });
 
+  it('also sends on an agent that ends still at an activity while patrolling (FR-035)', () => {
+    const { store, hook } = install();
+    hook.test.patrol(true);
+    tickFrames(store, 100);
+    // Not a patrol go-to: it arrives `working`, not `idle`.
+    expect(hook.test.order('designer', { type: 'activity', activity: 'work' })).toEqual(
+      expect.objectContaining({ ok: true }),
+    );
+    let elapsed = 0;
+    while (store.getState().sim.agents[4]!.status !== 'working' && elapsed < 30_000) {
+      store.getState().tick(16);
+      elapsed += 16;
+    }
+    expect(elapsed).toBeLessThan(30_000);
+    tickFrames(store, 500);
+    const designer = store.getState().sim.agents[4]!;
+    expect(designer.status).toBe('walking');
+    expect(designer.next).not.toBeNull();
+  });
+
   it('skips an agent when all candidate orders fail without reentering patrol', () => {
     const { store, hook } = install();
     const { sim, world } = store.getState();
